@@ -5,8 +5,9 @@ Jeu de bluff multijoueur asynchrone. Un joueur recoit une carte (question insoli
 budget de mise entre les propositions. Chacun joue quand il veut : aucune
 connexion simultanee n'est necessaire.
 
-**Statut : backend fonctionnel et teste. L'app mobile n'est pas encore
-scaffoldee** (voir *Suite du plan* en bas).
+**Statut : boucle de jeu jouable de bout en bout**, backend + app mobile.
+Le visuel est volontairement minimaliste et les assets d'avatars sont
+provisoires.
 
 ---
 
@@ -107,6 +108,25 @@ npm run dev:backend
 
 L'API ecoute sur `http://localhost:4000`. Verification : `curl localhost:4000/health`.
 
+### Lancer l'app mobile
+
+Dans un second terminal, l'API devant tourner :
+
+```bash
+npm run dev:mobile
+```
+
+Puis `i` pour le simulateur iOS, `a` pour Android, `w` pour le navigateur, ou
+scanner le QR code avec Expo Go.
+
+L'app derive l'adresse de l'API depuis l'hote du bundler Metro : sur un
+telephone physique, « localhost » designerait le telephone lui-meme. Pour
+pointer ailleurs (staging, Railway) :
+
+```bash
+EXPO_PUBLIC_API_URL=https://mon-api.up.railway.app npm run dev:mobile
+```
+
 ### Tests
 
 ```bash
@@ -143,8 +163,36 @@ bluff-party/
 │       ├── modules/ # une route + un service par domaine
 │       ├── middleware/
 │       └── lib/
-└── mobile/          # (a venir) Expo + expo-router
+└── mobile/          # Expo + expo-router
+    ├── app/         # routage par fichiers
+    │   ├── onboarding.tsx
+    │   ├── salons/  # liste, creation, rejoindre
+    │   ├── salon/[id].tsx
+    │   └── round/[id].tsx
+    └── src/
+        ├── api/     # client HTTP + hooks react-query
+        ├── auth/    # token en SecureStore
+        ├── avatars/ # rendu provisoire, remplacable sans toucher a l'API
+        ├── screens/ # BluffScreen, BetScreen, ResultScreen
+        └── components/
 ```
+
+### Cote mobile
+
+**Un seul ecran pour tout un round.** `app/round/[id].tsx` derive la vue de
+l'etat serveur (phase + role) au lieu de naviguer entre trois routes. En
+asynchrone la phase change sous les pieds du joueur — le bluffeur valide
+pendant qu'on regarde l'ecran d'attente — et une navigation figee laisserait
+l'ecran bloque sur une phase revolue.
+
+**Rafraichissement.** L'app interroge l'API toutes les 5 s sur la partie et le
+round en cours, et s'arrete des que le round est resolu. C'est la solution de
+depart ; les notifications push restent indispensables (voir *Points ouverts*).
+
+**Avatars.** Le backend ne manipule que des identifiants (`renard`,
+`lunettes`…) et ignore l'apparence. `mobile/src/avatars/registry.ts` est le seul
+fichier a remplacer quand les vrais assets arrivent : aucun changement d'API,
+aucune migration.
 
 Le dossier `game/` ne fait aucune I/O : tout entre par les arguments. C'est ce
 qui permet de tester l'integralite des regles sans base de donnees, et de les
@@ -252,12 +300,13 @@ Le seed n'est pas execute automatiquement : le lancer une fois a la main
 | 1. Schema Prisma, migration, seed | fait |
 | 2. Moteur de regles + tests unitaires | fait |
 | 3. API complete + tests e2e | fait |
-| 4. Mobile : onboarding, salon, les 3 ecrans de round | **a faire** |
+| 4. Mobile : onboarding, salon, les 3 phases de round | fait |
 | 5. Twists supplementaires | a faire |
 | 5b. Relecture des 100 cartes (toutes en `DRAFT`) | **a faire** |
 | 6. Notifications push (le mode asynchrone en a besoin) | a faire |
 | 7. Deploiement Railway | config prete, non deployee |
 | 8. Polish visuel, assets d'avatars definitifs | a faire |
+| 9. Tests de l'app mobile (aucun pour l'instant) | **a faire** |
 
 ### Points ouverts
 

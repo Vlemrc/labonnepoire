@@ -4,14 +4,15 @@
   "version": "0.1.0",
   "workspaces": [
     "shared",
-    "backend"
+    "backend",
+    "mobile"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev:backend": "npm run build -w shared && npm run dev -w backend",
-    "dev:mobile": "npm run start -w mobile",
+    "dev:mobile": "npm run build -w shared && npm run start -w mobile",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:migrate": "npm run db:migrate -w backend",

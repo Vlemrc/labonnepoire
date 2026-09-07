@@ -82,7 +82,10 @@ export interface RoundParticipantView {
 
 export interface RoundView {
   id: string;
+  sessionId: string;
   number: number;
+  /** Revele uniquement a la resolution : sert au signalement de carte. */
+  cardId: string | null;
   status: RoundStatus;
   mode: RoundMode;
   stakeBudget: number;

@@ -10,3 +10,5 @@ coverage/
 
 dist/
 prisma/dev.db
+.expo/
+expo-env.d.ts

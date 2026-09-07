@@ -28,7 +28,9 @@ export function toRoundView(round: RoundWithRelations, viewerId: string): RoundV
 
   return {
     id: round.id,
+    sessionId: round.sessionId,
     number: round.number,
+    cardId: isResolved ? round.cardId : null,
     status: round.status,
     // Le mode reste cache aux parieurs tant que le round n'est pas resolu :
     // savoir qu'on est en FULL_BLUFF rendrait l'option « aucune » gratuite.
