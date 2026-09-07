@@ -66,20 +66,34 @@ function modifiersFor(round: RoundWithRelations) {
   });
 }
 
-/** Tire une carte des thematiques du salon, en evitant celles deja jouees. */
-async function drawCard(sessionId: string, themes: string[]) {
-  const played = await prisma.round.findMany({ where: { sessionId }, select: { cardId: true } });
-  const playedIds = played.map((r) => r.cardId);
+/**
+ * Tire une carte des thematiques du salon.
+ *
+ * L'exclusion porte sur le SALON, pas sur la partie : une carte deja servie a
+ * ce groupe est brulee definitivement, parce que celui qui en a ete bluffeur
+ * connait la reponse et que celui qui a parie s'en souvient. Une exclusion par
+ * partie ferait repiocher dans le paquet complet des la deuxieme soiree.
+ */
+async function drawCard(groupId: string, themes: string[]) {
+  const seen = await prisma.groupSeenCard.findMany({
+    where: { groupId },
+    select: { cardId: true },
+  });
+  const seenIds = seen.map((s) => s.cardId);
 
-  let where: { theme: { in: string[] }; id?: { notIn: string[] } } = {
+  const playable: Prisma.CardWhereInput = {
     theme: { in: themes },
-    ...(playedIds.length > 0 ? { id: { notIn: playedIds } } : {}),
+    status: { not: "REJECTED" },
+  };
+  let where: Prisma.CardWhereInput = {
+    ...playable,
+    ...(seenIds.length > 0 ? { id: { notIn: seenIds } } : {}),
   };
   let count = await prisma.card.count({ where });
 
   if (count === 0) {
-    // Paquet epuise : on recycle plutot que de bloquer la partie.
-    where = { theme: { in: themes } };
+    // Paquet epuise : on recycle plutot que de bloquer la partie en cours.
+    where = playable;
     count = await prisma.card.count({ where });
   }
   if (count === 0) {
@@ -126,7 +140,7 @@ export async function createNextRound(sessionId: string, userId: string) {
   }
 
   const group = session.group;
-  const card = await drawCard(sessionId, group.themes);
+  const card = await drawCard(group.id, group.themes);
   // Mode tire au sort et cache : voir FULL_BLUFF_PROBABILITY.
   const mode: RoundMode =
     group.allowNoneOption && Math.random() < FULL_BLUFF_PROBABILITY ? "FULL_BLUFF" : "STANDARD";
@@ -154,6 +168,13 @@ export async function createNextRound(sessionId: string, userId: string) {
     await tx.gameSession.update({
       where: { id: sessionId },
       data: { currentRoundNumber: created.number },
+    });
+    // Des que la carte est distribuee elle est brulee pour ce salon, meme si le
+    // round est ensuite annule : le bluffeur a deja vu la reponse.
+    await tx.groupSeenCard.upsert({
+      where: { groupId_cardId: { groupId: group.id, cardId: card.id } },
+      create: { groupId: group.id, cardId: card.id },
+      update: {},
     });
     return created;
   });

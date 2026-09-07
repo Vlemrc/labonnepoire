@@ -15,6 +15,8 @@ export async function resetDatabase() {
   await prisma.round.deleteMany();
   await prisma.sessionPlayer.deleteMany();
   await prisma.gameSession.deleteMany();
+  await prisma.cardReport.deleteMany();
+  await prisma.groupSeenCard.deleteMany();
   await prisma.groupMember.deleteMany();
   await prisma.group.deleteMany();
   await prisma.user.deleteMany();

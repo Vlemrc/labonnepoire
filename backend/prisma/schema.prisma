@@ -40,6 +40,15 @@ enum AnswerOrigin {
   PLAYER
 }
 
+enum CardStatus {
+  // Ecrite mais pas encore relue : jouable, mais signalable.
+  DRAFT
+  // Fait verifie contre une source.
+  VERIFIED
+  // Retiree du tirage (erreur confirmee ou trop signalee).
+  REJECTED
+}
+
 model User {
   id            String   @id @default(cuid())
   pseudo        String
@@ -59,6 +68,7 @@ model User {
   roundsAsBluffeur Round[]          @relation("RoundBluffeur")
   twistsActivated  Round[]          @relation("RoundTwistActivator")
   sessionsWon      GameSession[]    @relation("SessionWinner")
+  cardReports      CardReport[]
 }
 
 model Group {
@@ -75,8 +85,9 @@ model Group {
   roundDurationHours Int      @default(24)
   createdAt          DateTime @default(now())
 
-  members  GroupMember[]
-  sessions GameSession[]
+  members   GroupMember[]
+  sessions  GameSession[]
+  seenCards GroupSeenCard[]
 }
 
 model GroupMember {
@@ -125,16 +136,56 @@ model SessionPlayer {
 }
 
 model Card {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   question   String
   trueAnswer String
   theme      String
-  difficulty Int      @default(1)
-  createdAt  DateTime @default(now())
+  difficulty Int        @default(1)
+  status     CardStatus @default(DRAFT)
+  // D'ou vient le fait. Vide tant que la carte n'a pas ete relue.
+  source     String?
+  // Denormalise : evite un count() a chaque tirage de carte.
+  reportCount Int       @default(0)
+  createdAt  DateTime   @default(now())
 
-  rounds Round[]
+  rounds   Round[]
+  seenBy   GroupSeenCard[]
+  reports  CardReport[]
 
-  @@index([theme])
+  @@index([theme, status])
+}
+
+/**
+ * Cartes deja servies a un salon.
+ *
+ * L'exclusion se fait au niveau du SALON et non de la partie : une carte dont
+ * on a deja ete bluffeur ou parieur est brulee pour toujours dans ce groupe.
+ * Sans ca, chaque nouvelle partie repiocherait dans le paquet complet et les
+ * repetitions commenceraient des la deuxieme soiree.
+ */
+model GroupSeenCard {
+  id      String   @id @default(cuid())
+  groupId String
+  group   Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  cardId  String
+  card    Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  seenAt  DateTime @default(now())
+
+  @@unique([groupId, cardId])
+  @@index([groupId])
+}
+
+/** Signalement d'une carte fausse ou ambigue, par les joueurs eux-memes. */
+model CardReport {
+  id        String   @id @default(cuid())
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([cardId, userId])
 }
 
 model Round {

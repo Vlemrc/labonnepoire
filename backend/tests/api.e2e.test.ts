@@ -3,7 +3,7 @@ import { prisma } from "../src/lib/prisma.js";
 import { app, as, resetDatabase, signUp, type TestPlayer } from "./helpers/api.js";
 import request from "supertest";
 
-const THEMES = ["nature-animaux", "histoire", "faits-insolites"];
+const THEMES = ["animaux", "histoire", "insolite", "mots-et-langues", "lois-et-traditions"];
 
 async function setupSession(pseudos: string[], settings: Record<string, unknown> = {}) {
   const players: TestPlayer[] = [];
@@ -328,5 +328,114 @@ describe("cas limites", () => {
     const { players, group } = await setupSession(["Ana", "Bruno"]);
     const res = await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
     expect(res.body.group.members).toHaveLength(2);
+  });
+});
+
+describe("gestion du paquet de cartes", () => {
+  /** Ne laisse que `keep` cartes jouables, pour rendre les tirages deterministes. */
+  async function shrinkDeck(theme: string, keep: number) {
+    const kept = await prisma.card.findMany({ where: { theme }, take: keep, orderBy: { id: "asc" } });
+    await prisma.card.updateMany({
+      where: { id: { notIn: kept.map((c) => c.id) } },
+      data: { status: "REJECTED" },
+    });
+    return kept;
+  }
+
+  it("ne sert jamais deux fois la meme carte au meme salon, meme d'une partie a l'autre", async () => {
+    const kept = await shrinkDeck("animaux", 2);
+    const players = [await signUp("Ana"), await signUp("Bruno")];
+    const group = (
+      await as(players[0]!).post("/groups").send({ name: "Salon", themes: ["animaux"] }).expect(201)
+    ).body.group;
+    await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
+
+    const s1 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
+    const r1 = await as(players[0]!).post(`/sessions/${s1.id}/rounds`).expect(201);
+    const card1 = await prisma.round.findUniqueOrThrow({
+      where: { id: r1.body.round.id },
+      select: { cardId: true },
+    });
+
+    // Fin de la partie, puis nouvelle partie dans le MEME salon.
+    await as(players[1]!).post(`/sessions/${s1.id}/quit`).expect(200);
+    const s2 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
+    const r2 = await as(players[0]!).post(`/sessions/${s2.id}/rounds`).expect(201);
+    const card2 = await prisma.round.findUniqueOrThrow({
+      where: { id: r2.body.round.id },
+      select: { cardId: true },
+    });
+
+    expect(card2.cardId).not.toBe(card1.cardId);
+    expect(kept.map((c) => c.id)).toContain(card2.cardId);
+  });
+
+  it("recycle le paquet plutot que de bloquer la partie quand il est epuise", async () => {
+    await shrinkDeck("animaux", 1);
+    const players = [await signUp("Ana"), await signUp("Bruno")];
+    const group = (
+      await as(players[0]!).post("/groups").send({ name: "Salon", themes: ["animaux"] }).expect(201)
+    ).body.group;
+    await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
+
+    const s1 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
+    await as(players[0]!).post(`/sessions/${s1.id}/rounds`).expect(201);
+    await as(players[1]!).post(`/sessions/${s1.id}/quit`).expect(200);
+
+    const s2 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
+    await as(players[0]!).post(`/sessions/${s2.id}/rounds`).expect(201);
+  });
+
+  it("ne propose pas une thematique entierement retiree du tirage", async () => {
+    await prisma.card.updateMany({ where: { theme: "animaux" }, data: { status: "REJECTED" } });
+    const themes = (await request(app).get("/cards/themes").expect(200)).body.themes;
+    expect(themes.map((t: any) => t.theme)).not.toContain("animaux");
+  });
+});
+
+describe("signalement des cartes", () => {
+  async function playedRound() {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const card = await prisma.round.findUniqueOrThrow({
+      where: { id: res.body.round.id },
+      select: { cardId: true },
+    });
+    return { players, cardId: card.cardId };
+  }
+
+  it("accepte le signalement d'un joueur qui a vu la carte", async () => {
+    const { players, cardId } = await playedRound();
+    const res = await as(players[0]!)
+      .post(`/cards/${cardId}/report`)
+      .send({ reason: "La reponse est fausse" })
+      .expect(201);
+    expect(res.body.card.reportCount).toBe(1);
+    expect(res.body.card.status).toBe("DRAFT");
+  });
+
+  it("refuse le signalement d'un joueur qui n'a pas joue la carte", async () => {
+    const { cardId } = await playedRound();
+    const intrus = await signUp("Intrus");
+    const res = await as(intrus).post(`/cards/${cardId}/report`).expect(403);
+    expect(res.body.error.code).toBe("CARD_NOT_PLAYED");
+  });
+
+  it("refuse un second signalement du meme joueur", async () => {
+    const { players, cardId } = await playedRound();
+    await as(players[0]!).post(`/cards/${cardId}/report`).expect(201);
+    const res = await as(players[0]!).post(`/cards/${cardId}/report`).expect(409);
+    expect(res.body.error.code).toBe("ALREADY_REPORTED");
+  });
+
+  it("retire automatiquement une carte du tirage au troisieme signalement", async () => {
+    const { players, cardId } = await playedRound();
+    await as(players[0]!).post(`/cards/${cardId}/report`).expect(201);
+    await as(players[1]!).post(`/cards/${cardId}/report`).expect(201);
+    const res = await as(players[2]!).post(`/cards/${cardId}/report`).expect(201);
+    expect(res.body.card.status).toBe("REJECTED");
+
+    const card = await prisma.card.findUniqueOrThrow({ where: { id: cardId } });
+    expect(card.status).toBe("REJECTED");
   });
 });

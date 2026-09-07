@@ -92,12 +92,12 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Le seed installe **36 cartes** sur 3 thematiques (`nature-animaux`, `histoire`,
-`faits-insolites`) et les 3 twists.
+Le seed installe **100 cartes** reparties sur 5 thematiques (`animaux`,
+`insolite`, `histoire`, `mots-et-langues`, `lois-et-traditions`) et les 3 twists.
 
-> Le contenu des cartes est un **placeholder** destine a faire tourner la boucle
-> de jeu. Les reponses n'ont pas ete verifiees une par une — a relire avant toute
-> mise en ligne publique. Il vit dans `backend/prisma/seed/cards.ts`.
+> **Aucune carte n'est verifiee.** Les 100 cartes sont toutes en statut `DRAFT` :
+> elles sont jouables, mais leurs reponses n'ont pas ete controlees contre une
+> source. Voir *Contenu des cartes* plus bas pour le circuit de relecture.
 
 ### Lancer l'API
 
@@ -113,11 +113,11 @@ L'API ecoute sur `http://localhost:4000`. Verification : `curl localhost:4000/he
 npm test
 ```
 
-59 tests : moteur de score pur, machine a etats, et une suite end-to-end qui
+66 tests : moteur de score pur, machine a etats, et une suite end-to-end qui
 joue des parties completes via HTTP. Les tests e2e utilisent une base separee
-`bluff_party_test` (creee avec `createdb bluff_party_test`, puis
-`DATABASE_URL=... npx prisma migrate deploy` depuis `backend/`). Surchargeable
-avec `TEST_DATABASE_URL`.
+`bluff_party_test` : cree-la une fois avec `createdb bluff_party_test`, les
+migrations sont ensuite appliquees automatiquement avant chaque `npm test`.
+Surchargeable avec `TEST_DATABASE_URL`.
 
 ### Outils
 
@@ -149,6 +149,44 @@ bluff-party/
 Le dossier `game/` ne fait aucune I/O : tout entre par les arguments. C'est ce
 qui permet de tester l'integralite des regles sans base de donnees, et de les
 faire evoluer sans toucher aux routes.
+
+### Contenu des cartes
+
+Les cartes vivent dans **`backend/prisma/seed/data/cards.json`**, pas dans du
+code : a plusieurs centaines d'entrees, un fichier TypeScript devient illisible
+en diff et penible a editer pour qui n'ecrit pas de code. Le seed valide le
+fichier avec zod avant de l'importer (question minimale, thematique en
+kebab-case, doublons de question) et echoue avec le numero de la carte fautive.
+
+Chaque carte porte un `status` :
+
+| statut | effet |
+|---|---|
+| `DRAFT` | jouable, mais pas encore relue contre une source |
+| `VERIFIED` | fait controle, `source` renseignee |
+| `REJECTED` | sortie du tirage, jamais supprimee (des rounds y font reference) |
+
+Re-lancer `npm run db:seed` met a jour le contenu existant, cree les nouvelles
+cartes, et **retire du tirage** celles qui ne sont plus dans le fichier. Le
+statut et le compteur de signalements d'une carte deja en base ne sont jamais
+ecrases.
+
+**Signalement en jeu.** `POST /cards/:cardId/report` permet a un joueur qui a
+reellement vu la carte de la signaler. Au troisieme signalement, elle passe
+automatiquement en `REJECTED`. C'est le seul mecanisme de relecture qui passe a
+l'echelle : les joueurs reperent une carte fausse bien mieux qu'une relecture en
+amont.
+
+**Une carte ne sert qu'une fois par salon.** La table `GroupSeenCard` retient
+les cartes deja distribuees a un groupe. Une exclusion limitee a la partie ferait
+repiocher dans le paquet complet des la deuxieme soiree, alors qu'une carte deja
+vue est brulee : le bluffeur connait la reponse, le parieur s'en souvient. Quand
+le paquet d'un salon est epuise, le tirage recycle plutot que de bloquer la
+partie.
+
+Ordre de grandeur : 100 cartes sur 5 thematiques font 20 cartes par thematique.
+Un salon qui n'en coche que deux joue dans un paquet de 40, soit deux ou trois
+soirees. **Cocher large, ou ecrire davantage de cartes.**
 
 ### Modele de donnees
 
@@ -182,6 +220,7 @@ Authentification : `Authorization: Bearer <token>`, obtenu a la creation du comp
 | `POST` | `/rounds/:id/twist` | activer sa carte twist |
 | `POST` | `/rounds/:id/resolve` | forcer la resolution apres la deadline |
 | `GET` | `/cards/themes` `/cards/twists` | catalogues |
+| `POST` | `/cards/:cardId/report` | signaler une carte fausse ou ambigue |
 
 `GET /rounds/:id` est le point sensible : la vraie reponse, l'auteur de chaque
 fausse reponse, le mode du round et les mises des autres joueurs ne sont ajoutes
@@ -214,7 +253,8 @@ Le seed n'est pas execute automatiquement : le lancer une fois a la main
 | 2. Moteur de regles + tests unitaires | fait |
 | 3. API complete + tests e2e | fait |
 | 4. Mobile : onboarding, salon, les 3 ecrans de round | **a faire** |
-| 5. Twists supplementaires, contenu editorial | a faire |
+| 5. Twists supplementaires | a faire |
+| 5b. Relecture des 100 cartes (toutes en `DRAFT`) | **a faire** |
 | 6. Notifications push (le mode asynchrone en a besoin) | a faire |
 | 7. Deploiement Railway | config prete, non deployee |
 | 8. Polish visuel, assets d'avatars definitifs | a faire |
