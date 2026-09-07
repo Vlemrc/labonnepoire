@@ -1,4 +1,10 @@
+import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+
+// Charge backend/.env en local. En production (Railway), les variables sont
+// injectees par la plateforme et ce fichier n'existe pas : dotenv est alors
+// silencieux, il n'ecrase jamais une variable deja definie.
+loadDotenv();
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL est requis"),
