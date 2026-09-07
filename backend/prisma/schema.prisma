@@ -1,0 +1,230 @@
+// Schema Prisma — jeu de bluff asynchrone.
+// Regle de lecture : Group = salon persistant, GameSession = une partie jouee
+// dans ce salon. Les points vivent sur SessionPlayer (pas sur le salon), ce qui
+// permet de relancer une partie sans repartir de zero cote salon.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  LOBBY
+  IN_PROGRESS
+  FINISHED
+}
+
+enum RoundStatus {
+  WRITING
+  BETTING
+  RESOLVED
+  CANCELLED
+}
+
+enum RoundMode {
+  STANDARD
+  FULL_BLUFF
+}
+
+enum RoundRole {
+  BLUFFEUR
+  BETTOR
+}
+
+enum AnswerOrigin {
+  CARD
+  PLAYER
+}
+
+model User {
+  id            String   @id @default(cuid())
+  pseudo        String
+  // Optionnel des le MVP : permet de brancher le magic link plus tard sans migration.
+  email         String?  @unique
+  avatarConfig  Json
+  // On ne stocke jamais le token en clair.
+  authTokenHash String   @unique
+  createdAt     DateTime @default(now())
+
+  memberships    GroupMember[]
+  sessionPlayers SessionPlayer[]
+  answers        Answer[]
+  bets           Bet[]
+  participations RoundParticipant[]
+  ownedGroups    Group[]            @relation("GroupOwner")
+  roundsAsBluffeur Round[]          @relation("RoundBluffeur")
+  twistsActivated  Round[]          @relation("RoundTwistActivator")
+  sessionsWon      GameSession[]    @relation("SessionWinner")
+}
+
+model Group {
+  id                 String   @id @default(cuid())
+  code               String   @unique
+  name               String
+  ownerId            String
+  owner              User     @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  startingPoints     Int      @default(20)
+  stakeBudget        Int      @default(10)
+  themes             String[]
+  allowNoneOption    Boolean  @default(true)
+  twistsEnabled      Boolean  @default(true)
+  roundDurationHours Int      @default(24)
+  createdAt          DateTime @default(now())
+
+  members  GroupMember[]
+  sessions GameSession[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GameSession {
+  id                 String        @id @default(cuid())
+  groupId            String
+  group              Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  status             SessionStatus @default(LOBBY)
+  currentRoundNumber Int           @default(0)
+  winnerId           String?
+  winner             User?         @relation("SessionWinner", fields: [winnerId], references: [id])
+  createdAt          DateTime      @default(now())
+  finishedAt         DateTime?
+
+  players SessionPlayer[]
+  rounds  Round[]
+
+  @@index([groupId, status])
+}
+
+model SessionPlayer {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points        Int
+  isEliminated  Boolean     @default(false)
+  turnOrder     Int
+  // Prevu pour le mode equipes, non utilise par le MVP.
+  teamId        String?
+  twistCardUsed Boolean     @default(false)
+
+  @@unique([sessionId, userId])
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  question   String
+  trueAnswer String
+  theme      String
+  difficulty Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  rounds Round[]
+
+  @@index([theme])
+}
+
+model Round {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  number    Int
+  cardId    String
+  card      Card        @relation(fields: [cardId], references: [id])
+  bluffeurId String
+  bluffeur   User       @relation("RoundBluffeur", fields: [bluffeurId], references: [id])
+  mode      RoundMode   @default(STANDARD)
+  status    RoundStatus @default(WRITING)
+  // Fige a la creation du round : un changement de reglage du salon en cours de
+  // partie ne doit pas modifier un round deja lance.
+  stakeBudget        Int
+  allowNoneOption    Boolean @default(false)
+  twistCode          String?
+  twistActivatedById String?
+  twistActivatedBy   User?   @relation("RoundTwistActivator", fields: [twistActivatedById], references: [id])
+  createdAt      DateTime  @default(now())
+  writingEndedAt DateTime?
+  resolvedAt     DateTime?
+  deadlineAt     DateTime?
+  // Deltas et capitaux d'apres round, figes a la resolution : l'ecran de
+  // resultats doit rester consultable meme apres plusieurs rounds.
+  result         Json?
+
+  answers      Answer[]
+  bets         Bet[]
+  participants RoundParticipant[]
+
+  @@unique([sessionId, number])
+  @@index([status])
+}
+
+model RoundParticipant {
+  id           String    @id @default(cuid())
+  roundId      String
+  round        Round     @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         RoundRole
+  hasSubmitted Boolean   @default(false)
+  // Budget de mise effectif de ce joueur pour ce round (plafonne a son capital).
+  budget       Int       @default(0)
+
+  @@unique([roundId, userId])
+}
+
+model Answer {
+  id       String       @id @default(cuid())
+  roundId  String
+  round    Round        @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  text     String
+  isTrue   Boolean
+  origin   AnswerOrigin
+  // null pour la vraie reponse (elle vient de la carte, pas d'un joueur).
+  authorId String?
+  author   User?        @relation(fields: [authorId], references: [id])
+  // Ordre d'affichage melange, fige a la fin de la phase d'ecriture.
+  position Int
+
+  bets Bet[]
+
+  @@index([roundId])
+}
+
+model Bet {
+  id           String   @id @default(cuid())
+  roundId      String
+  round        Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  bettorId     String
+  bettor       User     @relation(fields: [bettorId], references: [id], onDelete: Cascade)
+  // null quand isNoneOption est vrai.
+  answerId     String?
+  answer       Answer?  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  isNoneOption Boolean  @default(false)
+  amount       Int
+  createdAt    DateTime @default(now())
+
+  @@index([roundId, bettorId])
+}
+
+// Catalogue des twists. La LOGIQUE vit dans src/game/twists/registry.ts,
+// indexee par ce code. Ajouter un twist = 1 fichier + 1 ligne de registry + 1 seed.
+model Twist {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  label       String
+  description String
+  isActive    Boolean @default(true)
+}

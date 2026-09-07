@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bluff-party-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bluff
+      POSTGRES_PASSWORD: bluff
+      POSTGRES_DB: bluff_party
+    ports:
+      - "5433:5432"
+    volumes:
+      - bluff_pgdata:/var/lib/postgresql/data
+volumes:
+  bluff_pgdata:
