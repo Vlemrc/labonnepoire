@@ -61,6 +61,12 @@ function AuthGate() {
 
   if (!ready) return <Loading label="Ouverture…" />;
 
+  // Sans token, on ne monte aucune route protegee. La redirection ci-dessus vit
+  // dans un effet, qui ne s'execute qu'APRES le rendu : sans ce garde-fou,
+  // l'ecran encore affiche se re-rend une fois sans token et useToken() leve.
+  // C'est exactement ce qui se passait en se deconnectant depuis « Mes salons ».
+  if (!token && segments[0] !== "onboarding") return <Loading label="Ouverture…" />;
+
   return (
     <Stack
       screenOptions={{

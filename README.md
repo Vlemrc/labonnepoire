@@ -247,9 +247,11 @@ Ajouter un avatar demande trois gestes, et aucune migration :
 
 > Les images actuelles viennent de `~/Documents/labonnepoire/avatars`,
 > redimensionnees a 512 px a la copie (les originaux font 1006 px, inutile pour
-> un affichage a 120 pt). **Quatre d'entre elles sont le meme fichier** :
-> `freezer`, `labubu`, `peach` et `t-rex` ont un MD5 identique, donc quatre
-> entrees du selecteur affichent le meme visage. A remplacer.
+> un affichage a 120 pt).
+>
+> `freezer` et `labubu` designent des personnages appartenant a des tiers
+> (Dragon Ball, Pop Mart). Sans consequence pour des parties entre amis, a
+> revoir avant toute publication.
 
 Le dossier `game/` ne fait aucune I/O : tout entre par les arguments. C'est ce
 qui permet de tester l'integralite des regles sans base de donnees, et de les
