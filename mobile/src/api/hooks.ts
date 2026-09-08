@@ -75,7 +75,7 @@ function useRefreshGame() {
 }
 
 export function useCreateGroup() {
-  const token = useToken();
+  const { token } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { name: string; themes: string[]; startingPoints?: number; stakeBudget?: number }) =>
@@ -85,7 +85,7 @@ export function useCreateGroup() {
 }
 
 export function useJoinGroup() {
-  const token = useToken();
+  const { token } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (code: string) =>

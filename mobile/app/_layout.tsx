@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../src/auth/AuthContext";
+import { PendingSalonProvider } from "../src/onboarding/PendingSalon";
 import { Loading } from "../src/components/ui";
 import { colors } from "../src/theme";
 
@@ -42,8 +43,22 @@ function useAppStateFocus() {
 }
 
 /**
- * Redirige vers l'onboarding tant qu'aucun compte n'existe.
- * On attend `ready` : sans ca, l'app renverrait vers l'onboarding a chaque
+ * Ecrans accessibles sans compte.
+ *
+ * Le compte ne se cree qu'une fois le salon choisi : l'arrivee, la creation et
+ * l'adhesion doivent donc etre jouables sans token, et seul l'ecran de profil
+ * declenche l'inscription.
+ */
+function isPublicRoute(segments: string[]): boolean {
+  const [first, second] = segments;
+  if (first === "welcome" || first === "profile") return true;
+  if (first === "salons" && (second === "new" || second === "join")) return true;
+  return false;
+}
+
+/**
+ * Redirige vers l'accueil tant qu'aucun compte n'existe.
+ * On attend `ready` : sans ca, l'app renverrait vers l'accueil a chaque
  * demarrage pendant la relecture du token.
  */
 function AuthGate() {
@@ -54,9 +69,12 @@ function AuthGate() {
 
   useEffect(() => {
     if (!ready) return;
-    const onOnboarding = segments[0] === "onboarding";
-    if (!token && !onOnboarding) router.replace("/onboarding");
-    if (token && onOnboarding) router.replace("/salons");
+    const isPublic = isPublicRoute(segments);
+    if (!token && !isPublic) router.replace("/welcome");
+    // Un joueur deja inscrit n'a plus rien a faire sur l'accueil ni le profil.
+    if (token && (segments[0] === "welcome" || segments[0] === "profile")) {
+      router.replace("/salons");
+    }
   }, [ready, token, segments, router]);
 
   if (!ready) return <Loading label="Ouverture…" />;
@@ -65,7 +83,7 @@ function AuthGate() {
   // dans un effet, qui ne s'execute qu'APRES le rendu : sans ce garde-fou,
   // l'ecran encore affiche se re-rend une fois sans token et useToken() leve.
   // C'est exactement ce qui se passait en se deconnectant depuis « Mes salons ».
-  if (!token && segments[0] !== "onboarding") return <Loading label="Ouverture…" />;
+  if (!token && !isPublicRoute(segments)) return <Loading label="Ouverture…" />;
 
   return (
     <Stack
@@ -77,7 +95,8 @@ function AuthGate() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="welcome" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ title: "Ton profil" }} />
       <Stack.Screen name="salons/index" options={{ title: "Mes salons" }} />
       <Stack.Screen name="salons/new" options={{ title: "Nouveau salon" }} />
       <Stack.Screen name="salons/join" options={{ title: "Rejoindre" }} />
@@ -92,8 +111,10 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <StatusBar style="light" />
-          <AuthGate />
+          <PendingSalonProvider>
+            <StatusBar style="light" />
+            <AuthGate />
+          </PendingSalonProvider>
         </AuthProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

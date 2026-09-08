@@ -224,6 +224,20 @@ la-bonne-poire/
 
 ### Cote mobile
 
+**Le compte se cree en dernier.** L'ecran d'arrivee ne demande rien : creer un
+salon, ou en rejoindre un avec son code. Le pseudo et l'avatar ne sont demandes
+qu'ensuite, et tout part en une seule fois — compte puis salon.
+
+L'API exige pourtant un token pour creer ou rejoindre un salon. Plutot que
+d'ouvrir un compte anonyme au lancement, qui laisserait un compte vide derriere
+chaque visiteur qui abandonne, le choix du joueur est retenu en memoire
+(`src/onboarding/PendingSalon.tsx`) et rejoue apres l'inscription. Un joueur
+deja inscrit saute simplement l'etape.
+
+Consequence sur le routage : `welcome`, `profile`, `salons/new` et
+`salons/join` sont accessibles sans token — voir `isPublicRoute` dans
+`app/_layout.tsx`. Tout le reste redirige vers l'accueil.
+
 **Un seul ecran pour tout un round.** `app/round/[id].tsx` derive la vue de
 l'etat serveur (phase + role) au lieu de naviguer entre trois routes. En
 asynchrone la phase change sous les pieds du joueur — le bluffeur valide

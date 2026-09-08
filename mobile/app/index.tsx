@@ -5,5 +5,5 @@ import { Loading } from "../src/components/ui";
 export default function Index() {
   const { ready, token } = useAuth();
   if (!ready) return <Loading />;
-  return <Redirect href={token ? "/salons" : "/onboarding"} />;
+  return <Redirect href={token ? "/salons" : "/welcome"} />;
 }

@@ -10,7 +10,7 @@ interface AuthState {
   ready: boolean;
   token: string | null;
   user: PublicUser | null;
-  signUp: (pseudo: string, avatar: AvatarId) => Promise<void>;
+  signUp: (pseudo: string, avatar: AvatarId) => Promise<string>;
   updateProfile: (patch: { pseudo?: string; avatar?: AvatarId }) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -55,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setItem(TOKEN_KEY, res.token);
     setToken(res.token);
     setUser(res.user);
+    // Rendu explicitement : le state React n'est pas encore propage, et
+    // l'appelant enchaine immediatement sur la creation ou l'adhesion au salon.
+    return res.token;
   }, []);
 
   const updateProfile = useCallback(
