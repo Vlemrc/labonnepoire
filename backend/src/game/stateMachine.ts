@@ -169,6 +169,19 @@ export function allBettorsSubmitted(round: RoundSnapshot): boolean {
   return bettors.length > 0 && bettors.every((p) => p.hasSubmitted);
 }
 
+export function hasExpired(round: RoundSnapshot, now: Date): boolean {
+  return round.deadlineAt !== null && round.deadlineAt.getTime() <= now.getTime();
+}
+
+/**
+ * Le bluffeur a laisse filer la phase d'ecriture. C'est le blocage le plus
+ * grave du mode asynchrone : sans reponses, le round ne peut pas etre resolu,
+ * et rien ne permet de lancer le suivant. Il faut l'annuler.
+ */
+export function isAbandonedInWriting(round: RoundSnapshot, now: Date): boolean {
+  return round.status === "WRITING" && hasExpired(round, now);
+}
+
 /**
  * Un round est resoluble quand tout le monde a mise, ou quand la deadline est
  * passee. Sans cette seconde condition, un seul joueur inactif gelerait la
@@ -177,7 +190,7 @@ export function allBettorsSubmitted(round: RoundSnapshot): boolean {
 export function canResolve(round: RoundSnapshot, now: Date): boolean {
   if (round.status !== "BETTING") return false;
   if (allBettorsSubmitted(round)) return true;
-  return round.deadlineAt !== null && round.deadlineAt.getTime() <= now.getTime();
+  return hasExpired(round, now);
 }
 
 /** Le prochain bluffeur est le joueur actif suivant dans l'ordre du tour. */

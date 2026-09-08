@@ -11,6 +11,10 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   CORS_ORIGIN: z.string().default("*"),
+  // Secret partage protegeant l'endpoint de balayage. Non defini = endpoint
+  // desactive : mieux vaut une maintenance inerte qu'une route ouverte capable
+  // de resoudre les rounds de n'importe qui.
+  MAINTENANCE_TOKEN: z.string().min(16).optional(),
 });
 
 const parsed = schema.safeParse(process.env);

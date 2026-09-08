@@ -219,7 +219,7 @@ model Round {
   participants RoundParticipant[]
 
   @@unique([sessionId, number])
-  @@index([status])
+  @@index([status, deadlineAt])
 }
 
 model RoundParticipant {

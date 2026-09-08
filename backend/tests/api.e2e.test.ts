@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma.js";
 import { app, as, resetDatabase, signUp, type TestPlayer } from "./helpers/api.js";
 import request from "supertest";
@@ -437,5 +437,137 @@ describe("signalement des cartes", () => {
 
     const card = await prisma.card.findUniqueOrThrow({ where: { id: cardId } });
     expect(card.status).toBe("REJECTED");
+  });
+});
+
+describe("rounds expires — le filet de securite de l'asynchrone", () => {
+  const past = () => new Date(Date.now() - 60_000);
+
+  it("annule le round et penalise le bluffeur qui n'a pas ecrit a temps", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
+      startingPoints: 20,
+      stakeBudget: 10,
+    });
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const roundId = res.body.round.id;
+    const bluffeurId = res.body.round.bluffeur.id;
+    const bettorIds: string[] = res.body.round.participants
+      .filter((p: any) => p.role === "BETTOR")
+      .map((p: any) => p.user.id);
+
+    // Le bluffeur ne fait rien et la deadline passe.
+    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
+
+    // Un simple coup d'oeil sur la partie suffit a la debloquer.
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: roundId } });
+    expect(round.status).toBe("CANCELLED");
+
+    const points = Object.fromEntries(
+      view.body.session.players.map((p: any) => [p.userId, p.points]),
+    );
+    expect(points[bluffeurId]).toBe(10); // 20 - 10 de penalite
+    for (const id of bettorIds) expect(points[id]).toBe(25); // 20 + 5 chacun
+    const total = Object.values(points).reduce((s: number, p: any) => s + p, 0);
+    expect(total).toBe(60); // toujours a somme nulle
+  });
+
+  it("expose le motif de l'annulation au joueur", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"]);
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const roundId = res.body.round.id;
+    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
+
+    const view = await as(players[0]!).get(`/rounds/${roundId}`).expect(200);
+    expect(view.body.round.status).toBe("CANCELLED");
+    expect(view.body.round.cancelReason).toBe("BLUFFEUR_TIMEOUT");
+    expect(view.body.round.result.deltas).toHaveLength(2);
+  });
+
+  it("permet de repartir sur un nouveau round apres un abandon", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    const first = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const ghost = first.body.round.bluffeur.id;
+    await prisma.round.update({
+      where: { id: first.body.round.id },
+      data: { deadlineAt: past() },
+    });
+
+    // Sans balayage, cet appel echouerait en ROUND_IN_PROGRESS pour toujours.
+    const second = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    expect(second.body.round.bluffeur.id).not.toBe(ghost);
+  });
+
+  it("resout un round de mises expire en faisant payer le forfait", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      startingPoints: 20,
+      stakeBudget: 10,
+      allowNoneOption: false,
+    });
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const roundId = res.body.round.id;
+    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
+    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: ["A", "B"] }).expect(201);
+
+    // Le parieur ne mise jamais.
+    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
+
+    const view = await as(bluffeur).get(`/sessions/${session.id}`).expect(200);
+    const points = Object.fromEntries(
+      view.body.session.players.map((p: any) => [p.userId, p.points]),
+    );
+    expect(points[bluffeur.id]).toBe(30); // recupere le budget non mise
+    expect(points[bettors[0]!.id]).toBe(10);
+  });
+
+  it("ne touche pas a un round dont la deadline n'est pas passee", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"]);
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: res.body.round.id } });
+    expect(round.status).toBe("WRITING");
+  });
+
+  it("termine la partie si la penalite elimine le bluffeur", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      startingPoints: 8,
+      stakeBudget: 10,
+    });
+    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    const bluffeurId = res.body.round.bluffeur.id;
+    await prisma.round.update({
+      where: { id: res.body.round.id },
+      data: { deadlineAt: past() },
+    });
+
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(view.body.session.status).toBe("FINISHED");
+    expect(view.body.session.winnerId).not.toBe(bluffeurId);
+    const loser = view.body.session.players.find((p: any) => p.userId === bluffeurId);
+    expect(loser.points).toBe(0);
+  });
+});
+
+describe("endpoint de maintenance", () => {
+  it("est desactive tant que MAINTENANCE_TOKEN n'est pas configure", async () => {
+    const res = await request(app).post("/maintenance/sweep").expect(503);
+    expect(res.body.error.code).toBe("MAINTENANCE_DISABLED");
+  });
+
+  it("refuse un token invalide quand le balayage est configure", async () => {
+    // La config est validee une seule fois au demarrage : pour tester une autre
+    // valeur il faut vraiment recharger le module, pas juste changer l'env.
+    process.env.MAINTENANCE_TOKEN = "un-secret-de-plus-de-16-caracteres";
+    vi.resetModules();
+    try {
+      const { createApp } = await import("../src/app.js");
+      await request(createApp())
+        .post("/maintenance/sweep")
+        .set("x-maintenance-token", "mauvais")
+        .expect(401);
+    } finally {
+      delete process.env.MAINTENANCE_TOKEN;
+      vi.resetModules();
+    }
   });
 });

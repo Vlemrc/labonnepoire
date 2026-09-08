@@ -102,8 +102,10 @@ export interface RoundView {
   answers: AnswerPublicView[] | null;
   /** Ma propre repartition de mises, si deja soumise. */
   myBets: { answerId: string | null; isNoneOption: boolean; amount: number }[] | null;
-  /** Presente uniquement quand status === RESOLVED. */
+  /** Presente quand status vaut RESOLVED ou CANCELLED. */
   result: RoundResultView | null;
+  /** Pourquoi le round a ete annule, le cas echeant. */
+  cancelReason: "BLUFFEUR_TIMEOUT" | "PLAYER_LEFT" | null;
 }
 
 export interface RoundResultView {

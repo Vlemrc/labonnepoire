@@ -218,3 +218,65 @@ function assertZeroSum(deltas: Record<string, number>): void {
     throw new Error(`resolveRound: invariant somme nulle rompu (total = ${sum})`);
   }
 }
+
+export interface AbandonInput {
+  bluffeurId: string;
+  /** Parieurs encore actifs du round abandonne. */
+  bettorIds: string[];
+  /** Penalite totale prelevee au bluffeur, a repartir entre les parieurs. */
+  penalty: number;
+  players: ScoringPlayer[];
+}
+
+/**
+ * Round abandonne : le bluffeur a laisse expirer la phase d'ecriture.
+ *
+ * Sa penalite est prelevee sur son capital et repartie entre les parieurs qui
+ * ont attendu pour rien. Sans cout, disparaitre en tant que bluffeur serait la
+ * facon la moins risquee de jouer — c'est exactement le trou bouche cote
+ * parieur par la regle du forfait.
+ *
+ * La penalite est un TOTAL, pas un montant par parieur : indexee sur le nombre
+ * de joueurs, elle eliminerait le bluffeur des le premier oubli dans un salon
+ * un peu fourni.
+ */
+export function resolveAbandonedRound(input: AbandonInput): ScoringOutcome {
+  const { bluffeurId, bettorIds, penalty, players } = input;
+
+  const deltas: Record<string, number> = {};
+  for (const p of players) deltas[p.userId] = 0;
+  if (!(bluffeurId in deltas)) {
+    throw new Error(`resolveAbandonedRound: bluffeur inconnu (${bluffeurId})`);
+  }
+
+  const pointsBefore = new Map(players.map((p) => [p.userId, p.points]));
+  const available = Math.max(0, pointsBefore.get(bluffeurId) ?? 0);
+  const effective = Math.min(Math.max(0, penalty), available);
+  const payees = bettorIds.filter((id) => id in deltas);
+
+  if (effective > 0 && payees.length > 0) {
+    // Chaque parieur « reclame » la penalite entiere, et payProRata partage le
+    // budget reel entre ces demandes egales : parts egales, reste des arrondis
+    // attribue de facon deterministe, total exactement egal a la penalite.
+    const shares = payProRata(
+      payees.map((id) => ({ to: id, amount: effective })),
+      effective,
+    );
+    for (const [userId, amount] of shares) {
+      if (amount <= 0) continue;
+      deltas[userId]! += amount;
+      deltas[bluffeurId]! -= amount;
+    }
+  }
+
+  const pointsAfter: Record<string, number> = {};
+  const eliminated: string[] = [];
+  for (const p of players) {
+    const after = p.points + deltas[p.userId]!;
+    pointsAfter[p.userId] = after;
+    if (after <= 0) eliminated.push(p.userId);
+  }
+
+  assertZeroSum(deltas);
+  return { deltas, pointsAfter, eliminated };
+}

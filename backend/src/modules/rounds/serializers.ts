@@ -19,6 +19,8 @@ import type { RoundWithRelations } from "./service.js";
 export function toRoundView(round: RoundWithRelations, viewerId: string): RoundView {
   const isBluffeur = round.bluffeurId === viewerId;
   const isResolved = round.status === "RESOLVED";
+  const isCancelled = round.status === "CANCELLED";
+  const stored = (round.result ?? {}) as { reason?: string };
   const twist = buildTwistView(round);
 
   const answersVisible = round.status === "BETTING" || isResolved;
@@ -60,7 +62,14 @@ export function toRoundView(round: RoundWithRelations, viewerId: string): RoundV
       ? round.answers.map((a) => ({ id: a.id, text: a.text, position: a.position }))
       : null,
     myBets: myBets.length > 0 ? myBets : null,
-    result: isResolved ? buildResultView(round) : null,
+    // Un round annule porte lui aussi des deltas : la penalite du bluffeur
+    // absent a deja change les scores, l'ecran doit pouvoir l'expliquer.
+    result: isResolved || isCancelled ? buildResultView(round) : null,
+    cancelReason: isCancelled
+      ? stored.reason === "BLUFFEUR_TIMEOUT"
+        ? "BLUFFEUR_TIMEOUT"
+        : "PLAYER_LEFT"
+      : null,
   };
 }
 

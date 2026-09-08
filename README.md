@@ -31,6 +31,26 @@ Le jeu est **a somme nulle** : aucun point n'est cree ni detruit, ce qui garanti
 qu'une partie se termine. Cet invariant est verifie par assertion a chaque
 resolution (`assertZeroSum`) et par les tests.
 
+### Quand un joueur laisse tomber
+
+C'est le mode de panne le plus probable d'un jeu asynchrone, et il est traite
+explicitement : **un seul joueur inactif ne doit jamais pouvoir figer une
+partie.**
+
+| situation | consequence |
+|---|---|
+| un parieur laisse passer la deadline | son budget entier part au bluffeur, comme s'il avait tout mise a cote |
+| le bluffeur n'ecrit pas a temps | le round est annule, il perd un budget de mise (`stakeBudget`) reparti a parts egales entre les parieurs, et on passe au bluffeur suivant |
+| un joueur quitte la partie | il est elimine, ses rounds en cours sont annules |
+
+La penalite du bluffeur est un **total**, pas un montant par joueur : indexee
+sur le nombre de parieurs, elle l'eliminerait des le premier oubli dans un salon
+un peu fourni. Elle est plafonnee a son capital, donc elle peut l'eliminer mais
+jamais le faire passer sous zero.
+
+Ces transferts passent par les memes fonctions pures que le reste et respectent
+l'invariant de somme nulle.
+
 ### Deux mecaniques cachees
 
 **Mode « tout est faux » (FULL_BLUFF).** Dans ~15 % des rounds (si l'option est
@@ -271,6 +291,7 @@ Authentification : `Authorization: Bearer <token>`, obtenu a la creation du comp
 | `POST` | `/rounds/:id/resolve` | forcer la resolution apres la deadline |
 | `GET` | `/cards/themes` `/cards/twists` | catalogues |
 | `POST` | `/cards/:cardId/report` | signaler une carte fausse ou ambigue |
+| `POST` | `/maintenance/sweep` | fait avancer tous les rounds expires (tache planifiee) |
 
 `GET /rounds/:id` est le point sensible : la vraie reponse, l'auteur de chaque
 fausse reponse, le mode du round et les mises des autres joueurs ne sont ajoutes
@@ -289,6 +310,25 @@ verrouillent ce comportement.
 3. le `startCommand` applique les migrations (`prisma migrate deploy`) avant de
    demarrer l'API.
 
+### Tache planifiee
+
+`POST /maintenance/sweep` fait avancer tous les rounds expires de la base. Il
+est protege par un secret partage : definir `MAINTENANCE_TOKEN` (32 caracteres
+ou plus) et l'envoyer dans l'en-tete `x-maintenance-token`. **Tant que la
+variable n'est pas definie, l'endpoint repond 503** — mieux vaut une maintenance
+inerte qu'une route ouverte capable de resoudre les rounds de n'importe qui.
+
+Cote Railway, un cron toutes les 10 minutes :
+
+```
+curl -fsS -X POST "$API_URL/maintenance/sweep" -H "x-maintenance-token: $MAINTENANCE_TOKEN"
+```
+
+Ce n'est pas indispensable au fonctionnement : l'API balaie deja les rounds
+expires quand un joueur consulte une partie ou un round. Le cron sert aux cas ou
+personne ne regarde — et il deviendra obligatoire avec les notifications push,
+qui doivent partir sans que quiconque ait ouvert l'app.
+
 Le seed n'est pas execute automatiquement : le lancer une fois a la main
 (`npm run db:seed -w backend` avec le `DATABASE_URL` de production).
 
@@ -305,19 +345,22 @@ Le seed n'est pas execute automatiquement : le lancer une fois a la main
 | 4. Mobile : onboarding, salon, les 3 phases de round | fait |
 | 5. Twists supplementaires | a faire |
 | 5b. Relecture des 100 cartes (toutes en `DRAFT`) | **a faire** |
-| 6. Notifications push (le mode asynchrone en a besoin) | a faire |
+| 6. Notifications push (le mode asynchrone en a besoin) | **a faire** |
+| 6b. Deblocage automatique des rounds expires | fait |
 | 7. Deploiement Railway | config prete, non deployee |
 | 8. Polish visuel, assets d'avatars definitifs | a faire |
 | 9. Tests de l'app mobile (aucun pour l'instant) | **a faire** |
 
 ### Points ouverts
 
+- **Mise en page sur telephone.** Tout a ete verifie en 800x450 puis en 375x812.
+  Ca defile correctement, mais sur l'ecran du bluffeur les champs de saisie
+  passent sous la ligne de flottaison : la tache principale demande un scroll.
+  A retravailler au passage de polish visuel.
+
 - **Notifications push.** Un jeu asynchrone sans notification ne tourne pas : les
   joueurs oublient leur tour. A prevoir avant tout test reel a plusieurs
   (Expo Notifications + un champ `pushToken` sur `User`).
-- **Resolution automatique a la deadline.** Aujourd'hui la deadline autorise la
-  resolution mais ne la declenche pas : il faut qu'un joueur appelle
-  `POST /rounds/:id/resolve`. Un cron Railway reglerait ca proprement.
 - **Equipes.** Le schema prevoit `SessionPlayer.teamId`, mais rien ne l'utilise.
 - **Magic link.** `User.email` existe deja ; il ne manque qu'un provider d'envoi
   et une table de tokens a expiration.

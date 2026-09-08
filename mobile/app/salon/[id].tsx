@@ -146,20 +146,36 @@ function Scoreboard({ session, meId }: { session: SessionView; meId?: string }) 
 
 function RoundCard({ round }: { round: RoundView }) {
   const waiting = round.participants.filter((p) => !p.hasSubmitted);
+  // CANCELLED a longtemps ete traite comme un « autre » cas et affichait
+  // « Mises » : chaque statut est desormais nomme explicitement.
+  const LABELS: Record<RoundView["status"], string> = {
+    WRITING: "Ecriture",
+    BETTING: "Mises",
+    RESOLVED: "Termine",
+    CANCELLED: "Annule",
+  };
   const status =
     round.status === "WRITING"
       ? `${round.bluffeur.pseudo} prepare ses fausses reponses`
       : round.status === "BETTING"
         ? `${waiting.length} joueur${waiting.length > 1 ? "s" : ""} n'ont pas encore mise`
-        : "Round termine";
+        : round.status === "CANCELLED"
+          ? `Round annule : ${round.bluffeur.pseudo} n'a pas repondu a temps`
+          : "Round termine";
 
   return (
     <Card>
       <View style={st.header}>
         <Heading>Round {round.number}</Heading>
         <Pill
-          text={round.status === "RESOLVED" ? "Termine" : round.status === "WRITING" ? "Ecriture" : "Mises"}
-          tone={round.status === "RESOLVED" ? "muted" : "info"}
+          text={LABELS[round.status]}
+          tone={
+            round.status === "CANCELLED"
+              ? "bad"
+              : round.status === "RESOLVED"
+                ? "muted"
+                : "info"
+          }
         />
       </View>
       <Body muted>{status}</Body>

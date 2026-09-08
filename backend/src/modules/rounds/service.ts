@@ -108,6 +108,10 @@ async function drawCard(groupId: string, themes: string[]) {
 }
 
 export async function createNextRound(sessionId: string, userId: string) {
+  // Le joueur qui demande le round suivant est justement celui que bloque un
+  // round expire : on le fait tomber avant de refuser pour ROUND_IN_PROGRESS.
+  const { sweepExpiredRounds } = await import("./sweep.js");
+  await sweepExpiredRounds({ sessionId });
   const session = await loadSession(sessionId);
   if (session.status !== "IN_PROGRESS") {
     throw new GameRuleError("SESSION_NOT_RUNNING", "Cette partie n'est pas en cours.");

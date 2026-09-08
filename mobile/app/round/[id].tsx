@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import type { RoundView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useActivateTwist, useRound, useSession } from "../../src/api/hooks";
@@ -18,6 +18,7 @@ import {
   Screen,
   Title,
 } from "../../src/components/ui";
+import { Deadline } from "../../src/components/Deadline";
 import { colors, spacing } from "../../src/theme";
 
 /**
@@ -40,14 +41,7 @@ export default function Round() {
   const r = round.data;
   const me = r.participants.find((p) => p.user.id === user?.id);
 
-  if (r.status === "CANCELLED") {
-    return (
-      <Screen>
-        <Title>Round annule</Title>
-        <Body muted>Le bluffeur a quitte la partie.</Body>
-      </Screen>
-    );
-  }
+  if (r.status === "CANCELLED") return <Cancelled round={r} />;
 
   if (r.status === "RESOLVED") return <ResultScreen round={r} />;
 
@@ -73,6 +67,67 @@ export default function Round() {
   );
 }
 
+/**
+ * Un round annule n'est pas un ecran vide : la penalite du bluffeur absent a
+ * deja change les scores, il faut dire pourquoi et combien.
+ */
+function Cancelled({ round }: { round: RoundView }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const deltas = round.result?.deltas ?? [];
+  const mine = deltas.find((d) => d.user.id === user?.id);
+  const timeout = round.cancelReason === "BLUFFEUR_TIMEOUT";
+
+  return (
+    <Screen
+      footer={
+        <Button
+          label="Retour au salon"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/salons"))}
+        />
+      }
+    >
+      <Title>Round annule</Title>
+      <Body muted>
+        {timeout
+          ? `${round.bluffeur.pseudo} n'a pas envoye ses reponses a temps. Sa mise de depart est repartie entre vous.`
+          : `${round.bluffeur.pseudo} a quitte la partie.`}
+      </Body>
+
+      {mine && mine.delta !== 0 ? (
+        <Card style={{ borderColor: mine.delta > 0 ? colors.success : colors.danger }}>
+          <Text style={[s.bigDelta, { color: mine.delta > 0 ? colors.success : colors.danger }]}>
+            {mine.delta > 0 ? "+" : ""}
+            {mine.delta}
+          </Text>
+          <Body muted>Il te reste {mine.pointsAfter} points.</Body>
+        </Card>
+      ) : null}
+
+      {deltas.length > 0 ? (
+        <Card>
+          <Heading>Bilan</Heading>
+          {deltas.map((d) => (
+            <View key={d.user.id} style={s.row}>
+              <Avatar config={d.user.avatarConfig} size={28} />
+              <Text style={s.name}>{d.user.pseudo}</Text>
+              <Text
+                style={[
+                  s.delta,
+                  { color: d.delta > 0 ? colors.success : d.delta < 0 ? colors.danger : colors.textMuted },
+                ]}
+              >
+                {d.delta > 0 ? "+" : ""}
+                {d.delta}
+              </Text>
+            </View>
+          ))}
+        </Card>
+      ) : null}
+    </Screen>
+  );
+}
+
 function Waiting({ round, title, subtitle }: { round: RoundView; title: string; subtitle: string }) {
   const twist = useActivateTwist(round.id);
   const pending = round.participants.filter((p) => !p.hasSubmitted);
@@ -80,7 +135,10 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
 
   return (
     <Screen>
-      <Title>{title}</Title>
+      <View style={s.titleRow}>
+        <Title>{title}</Title>
+        <Deadline deadlineAt={round.deadlineAt} />
+      </View>
       <Body muted>{subtitle}</Body>
 
       {round.twist ? (
@@ -125,7 +183,10 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
 }
 
 const s = StyleSheet.create({
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },
+  bigDelta: { fontSize: 40, fontWeight: "800" },
+  delta: { fontSize: 16, fontWeight: "800", minWidth: 40, textAlign: "right" },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

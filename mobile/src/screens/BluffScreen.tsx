@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
 import { Body, Button, Card, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
+import { Deadline } from "../components/Deadline";
 import { colors, spacing } from "../theme";
 
 /**
@@ -13,8 +14,14 @@ import { colors, spacing } from "../theme";
 export function BluffScreen({ round }: { round: RoundView }) {
   const fullBluff = round.mode === "FULL_BLUFF";
   const expected = fullBluff ? 3 : 2;
-  const [answers, setAnswers] = useState<string[]>(Array(expected).fill(""));
   const submit = useSubmitAnswers(round.id);
+
+  // Le nombre de champs se derive du round a CHAQUE rendu, il n'est jamais fige
+  // dans l'etat. Le mode du round peut arriver apres le premier rendu, et un
+  // useState initialise une seule fois laisserait alors deux champs a l'ecran
+  // pour un round qui en exige trois : le bluffeur ne pourrait plus valider.
+  const [typed, setTyped] = useState<string[]>([]);
+  const answers = Array.from({ length: expected }, (_, i) => typed[i] ?? "");
 
   const filled = answers.map((a) => a.trim()).filter(Boolean);
   const canSubmit = filled.length === expected && !submit.isPending;
@@ -33,7 +40,14 @@ export function BluffScreen({ round }: { round: RoundView }) {
         </>
       }
     >
-      <Title>A toi de mentir</Title>
+      <View style={s.header}>
+        <Title>A toi de mentir</Title>
+        <Deadline deadlineAt={round.deadlineAt} />
+      </View>
+      <Body muted>
+        Passe ce delai, le round est annule et tu perds {round.stakeBudget} points
+        au profit des autres.
+      </Body>
 
       <Card style={{ borderColor: colors.primary }}>
         <Label>La question</Label>
@@ -66,7 +80,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
           label={`Mensonge ${index + 1}`}
           value={value}
           onChangeText={(text) =>
-            setAnswers((current) => current.map((a, i) => (i === index ? text : a)))
+            setTyped(answers.map((a, i) => (i === index ? text : a)))
           }
           placeholder="Une reponse plausible…"
           maxLength={200}
@@ -77,6 +91,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
 }
 
 const s = StyleSheet.create({
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   truth: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,

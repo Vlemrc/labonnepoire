@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth, currentUser } from "../../middleware/auth.js";
 import { HttpError } from "../../middleware/error.js";
 import { toRoundView } from "./serializers.js";
+import { sweepExpiredRounds } from "./sweep.js";
 import {
   activateTwist,
   loadRound,
@@ -43,6 +44,7 @@ async function assertParticipant(roundId: string, userId: string) {
 
 roundsRouter.get("/:roundId", async (req, res) => {
   const userId = currentUser(req).id;
+  await sweepExpiredRounds({ roundId: req.params.roundId });
   const round = await assertParticipant(req.params.roundId, userId);
   res.json({ round: toRoundView(round, userId) });
 });

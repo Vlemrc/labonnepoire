@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
 import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
+import { Deadline } from "../components/Deadline";
 import { colors, radius, spacing } from "../theme";
 
 const NONE_KEY = "__none__";
@@ -64,7 +65,10 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
       }
     >
       <View style={s.header}>
-        <Title>Ou tu mises ?</Title>
+        <View style={{ gap: spacing.xs }}>
+          <Title>Ou tu mises ?</Title>
+          <Deadline deadlineAt={round.deadlineAt} />
+        </View>
         <View style={s.budget}>
           <Text style={s.budgetValue}>{remaining}</Text>
           <Label>restants</Label>
@@ -80,7 +84,8 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
 
       <Body muted>
         Repartis tes {budget} jetons comme tu veux. Ceux poses sur la vraie
-        reponse te reviennent, les autres partent chez celui qui a menti.
+        reponse te reviennent, les autres partent chez celui qui a menti. Si tu
+        laisses passer le delai, tu les perds tous.
       </Body>
 
       {options.map((option) => {

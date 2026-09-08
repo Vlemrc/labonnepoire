@@ -9,6 +9,7 @@ import { groupsRouter } from "./modules/groups/routes.js";
 import { sessionsRouter } from "./modules/sessions/routes.js";
 import { roundsRouter } from "./modules/rounds/routes.js";
 import { cardsRouter } from "./modules/cards/routes.js";
+import { maintenanceRouter } from "./modules/maintenance/routes.js";
 
 export function createApp() {
   const app = express();
@@ -32,6 +33,7 @@ export function createApp() {
   app.use("/sessions", sessionsRouter);
   app.use("/rounds", roundsRouter);
   app.use("/cards", cardsRouter);
+  app.use("/maintenance", maintenanceRouter);
 
   app.use(notFound);
   app.use(errorHandler);
