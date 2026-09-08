@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import { useRouter } from "expo-router";
-import { GROUP_CODE_LENGTH } from "@bluff/shared";
+import { GROUP_CODE_LENGTH } from "@poire/shared";
 import { useJoinGroup } from "../../src/api/hooks";
 import { Body, Button, Field, Screen, Title } from "../../src/components/ui";
 import { colors, font } from "../../src/theme";

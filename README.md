@@ -1,4 +1,6 @@
-# Bluff Party
+# La Bonne Poire
+
+> *Une bonne poire, c'est celui qui se fait avoir sans rien voir venir.*
 
 Jeu de bluff multijoueur asynchrone. Un joueur recoit une carte (question insolite
 + vraie reponse), invente de fausses reponses, et les autres repartissent un
@@ -55,7 +57,7 @@ d'ecriture. Trois twists sont livres (`DOUBLE_STAKES`, `ALL_IN`,
 ### Prerequis
 
 - Node >= 20
-- PostgreSQL en local (une base `bluff_party`)
+- PostgreSQL en local (une base `bonne_poire`)
 
 ### Installation
 
@@ -74,13 +76,13 @@ npm run db:up
 Si tu utilises un PostgreSQL local plutot que Docker, cree simplement la base :
 
 ```bash
-createdb bluff_party
+createdb bonne_poire
 ```
 
 Puis renseigne `backend/.env` (copie de `backend/.env.example`) :
 
 ```
-DATABASE_URL="postgresql://<user>@localhost:5432/bluff_party?schema=public"
+DATABASE_URL="postgresql://<user>@localhost:5432/bonne_poire?schema=public"
 PORT=4000
 NODE_ENV=development
 CORS_ORIGIN="*"
@@ -135,7 +137,7 @@ npm test
 
 66 tests : moteur de score pur, machine a etats, et une suite end-to-end qui
 joue des parties completes via HTTP. Les tests e2e utilisent une base separee
-`bluff_party_test` : cree-la une fois avec `createdb bluff_party_test`, les
+`bonne_poire_test` : cree-la une fois avec `createdb bonne_poire_test`, les
 migrations sont ensuite appliquees automatiquement avant chaque `npm test`.
 Surchargeable avec `TEST_DATABASE_URL`.
 
@@ -151,7 +153,7 @@ npm run build       # compile shared + backend
 ## Architecture
 
 ```
-bluff-party/
+la-bonne-poire/
 ├── shared/          # types + constantes partages backend <-> mobile
 ├── backend/
 │   ├── prisma/      # schema, migrations, seed

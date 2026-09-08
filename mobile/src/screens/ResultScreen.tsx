@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import type { RoundView } from "@bluff/shared";
+import type { RoundView } from "@poire/shared";
 import { useAuth } from "../auth/AuthContext";
 import { useReportCard } from "../api/hooks";
 import { Avatar, Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";

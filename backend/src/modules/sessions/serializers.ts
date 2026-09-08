@@ -1,4 +1,4 @@
-import type { AvatarConfig, SessionView } from "@bluff/shared";
+import type { AvatarConfig, SessionView } from "@poire/shared";
 import { toRoundView } from "../rounds/serializers.js";
 import type { RoundWithRelations } from "../rounds/service.js";
 import type { SessionWithRelations } from "./service.js";

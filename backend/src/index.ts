@@ -4,7 +4,7 @@ import { prisma } from "./lib/prisma.js";
 
 const app = createApp();
 const server = app.listen(env.PORT, () => {
-  console.log(`[bluff-party] API sur http://localhost:${env.PORT} (${env.NODE_ENV})`);
+  console.log(`[la-bonne-poire] API sur http://localhost:${env.PORT} (${env.NODE_ENV})`);
 });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

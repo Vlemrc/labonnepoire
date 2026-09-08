@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import type { AvatarConfig } from "@bluff/shared";
+import type { AvatarConfig } from "@poire/shared";
 import { useAuth } from "../src/auth/AuthContext";
 import {
   ACCESSORY_EMOJI,

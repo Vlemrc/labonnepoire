@@ -3,7 +3,7 @@ import type {
   RoundResultView,
   RoundView,
   TwistView,
-} from "@bluff/shared";
+} from "@poire/shared";
 import { toPublicUser } from "../users/serializers.js";
 import { getTwist } from "../../game/twists/registry.js";
 import type { RoundWithRelations } from "./service.js";

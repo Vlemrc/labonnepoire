@@ -4,7 +4,7 @@ import {
   DEFAULT_STAKE_BUDGET,
   DEFAULT_STARTING_POINTS,
   GROUP_CODE_LENGTH,
-} from "@bluff/shared";
+} from "@poire/shared";
 
 export const groupSettingsSchema = z.object({
   startingPoints: z.number().int().min(5).max(200).default(DEFAULT_STARTING_POINTS),

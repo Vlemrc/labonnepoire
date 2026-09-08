@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   resolve: {
     alias: {
-      "@bluff/shared": fileURLToPath(new URL("../shared/src/index.ts", import.meta.url)),
+      "@poire/shared": fileURLToPath(new URL("../shared/src/index.ts", import.meta.url)),
     },
   },
   test: {
@@ -20,7 +20,7 @@ export default defineConfig({
       NODE_ENV: "test",
       DATABASE_URL:
         process.env.TEST_DATABASE_URL ??
-        "postgresql://steiner@localhost:5432/bluff_party_test?schema=public",
+        "postgresql://steiner@localhost:5432/bonne_poire_test?schema=public",
     },
   },
 });

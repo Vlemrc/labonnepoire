@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import type { RoundView, SessionView } from "@bluff/shared";
+import type { RoundView, SessionView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useGroup, useSession, useStartRound, useStartSession } from "../../src/api/hooks";
 import {

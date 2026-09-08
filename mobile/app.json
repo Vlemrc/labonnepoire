@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Bluff Party",
-    "slug": "bluff-party",
+    "name": "La Bonne Poire",
+    "slug": "la-bonne-poire",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,7 +21,7 @@
     "web": {
       "bundler": "metro"
     },
-    "scheme": "bluffparty",
+    "scheme": "bonnepoire",
     "plugins": [
       "expo-router",
       "expo-status-bar",

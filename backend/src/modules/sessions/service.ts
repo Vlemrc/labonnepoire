@@ -1,4 +1,4 @@
-import { MIN_PLAYERS_PER_SESSION } from "@bluff/shared";
+import { MIN_PLAYERS_PER_SESSION } from "@poire/shared";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { GameRuleError } from "../../game/errors.js";

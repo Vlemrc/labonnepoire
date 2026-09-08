@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { RoundView } from "@bluff/shared";
+import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
 import { Body, Button, Card, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { colors, spacing } from "../theme";

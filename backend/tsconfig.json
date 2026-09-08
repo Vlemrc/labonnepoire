@@ -13,7 +13,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "baseUrl": ".",
-    "paths": { "@bluff/shared": ["../shared/src/index.ts"] }
+    "paths": { "@poire/shared": ["../shared/src/index.ts"] }
   },
   "include": ["src", "tests", "prisma"]
 }

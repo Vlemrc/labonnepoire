@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { AuthResponse, AvatarConfig, PublicUser } from "@bluff/shared";
+import type { AuthResponse, AvatarConfig, PublicUser } from "@poire/shared";
 import { api } from "../api/client";
 import { getItem, removeItem, setItem } from "./storage";
 
-const TOKEN_KEY = "bluff.token";
+const TOKEN_KEY = "poire.token";
 
 interface AuthState {
   ready: boolean;

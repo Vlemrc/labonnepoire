@@ -1,5 +1,5 @@
 // Configuration monorepo : Metro doit surveiller la racine du workspace pour
-// resoudre @bluff/shared, qui vit en dehors de mobile/.
+// resoudre @poire/shared, qui vit en dehors de mobile/.
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("node:path");
 

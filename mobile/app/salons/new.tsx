@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { DEFAULT_STAKE_BUDGET, DEFAULT_STARTING_POINTS } from "@bluff/shared";
+import { DEFAULT_STAKE_BUDGET, DEFAULT_STARTING_POINTS } from "@poire/shared";
 import { useCreateGroup, useThemes } from "../../src/api/hooks";
 import { Body, Button, ErrorView, Field, Label, Loading, Screen, Title } from "../../src/components/ui";
 import { colors, radius, spacing } from "../../src/theme";

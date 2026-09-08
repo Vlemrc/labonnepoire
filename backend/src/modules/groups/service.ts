@@ -1,4 +1,4 @@
-import { MAX_PLAYERS_PER_GROUP } from "@bluff/shared";
+import { MAX_PLAYERS_PER_GROUP } from "@poire/shared";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { generateGroupCode } from "../../lib/ids.js";

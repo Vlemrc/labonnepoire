@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, font, radius, spacing } from "../theme";
 import { colorFor, emojiFor } from "../avatars/registry";
-import type { AvatarConfig } from "@bluff/shared";
+import type { AvatarConfig } from "@poire/shared";
 
 export function Screen({
   children,

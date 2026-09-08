@@ -2,7 +2,7 @@ import {
   ANSWERS_PER_ROUND,
   FAKE_ANSWERS_FULL_BLUFF,
   FAKE_ANSWERS_STANDARD,
-} from "@bluff/shared";
+} from "@poire/shared";
 import { GameRuleError } from "./errors.js";
 import type {
   RoundMode,

@@ -1,9 +1,9 @@
 {
-  "name": "@bluff/mobile",
+  "name": "@poire/mobile",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@bluff/shared": "*",
+    "@poire/shared": "*",
     "@expo/metro-runtime": "~57.0.15",
     "@tanstack/react-query": "^5.102.8",
     "expo": "~57.0.20",

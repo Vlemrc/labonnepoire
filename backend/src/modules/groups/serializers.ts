@@ -1,4 +1,4 @@
-import type { GroupSummary } from "@bluff/shared";
+import type { GroupSummary } from "@poire/shared";
 import { toPublicUser } from "../users/serializers.js";
 import type { GroupWithMembers } from "./service.js";
 

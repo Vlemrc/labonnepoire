@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { BetInput, RoundView } from "@bluff/shared";
+import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
 import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { colors, radius, spacing } from "../theme";

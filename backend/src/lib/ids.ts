@@ -1,5 +1,5 @@
 import { randomBytes, createHash } from "node:crypto";
-import { GROUP_CODE_LENGTH } from "@bluff/shared";
+import { GROUP_CODE_LENGTH } from "@poire/shared";
 
 // Alphabet sans I, O, 0, 1 : un code de salon se lit et se dicte a l'oral.
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

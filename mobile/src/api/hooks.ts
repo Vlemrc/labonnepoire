@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { GroupSummary, RoundView, SessionView, BetInput } from "@bluff/shared";
+import type { GroupSummary, RoundView, SessionView, BetInput } from "@poire/shared";
 import { api } from "./client";
 import { useAuth, useToken } from "../auth/AuthContext";
 

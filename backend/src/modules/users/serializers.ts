@@ -1,5 +1,5 @@
 import type { User } from "@prisma/client";
-import type { AvatarConfig, PublicUser } from "@bluff/shared";
+import type { AvatarConfig, PublicUser } from "@poire/shared";
 
 export function toPublicUser(user: Pick<User, "id" | "pseudo" | "avatarConfig">): PublicUser {
   return {

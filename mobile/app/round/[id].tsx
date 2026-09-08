@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import type { RoundView } from "@bluff/shared";
+import type { RoundView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useActivateTwist, useRound, useSession } from "../../src/api/hooks";
 import { BluffScreen } from "../../src/screens/BluffScreen";
