@@ -141,6 +141,29 @@ npm run dev:mobile
 Puis `i` pour le simulateur iOS, `a` pour Android, `w` pour le navigateur, ou
 scanner le QR code avec Expo Go.
 
+#### Expo Go ou build natif
+
+| commande | ce que ca fait | prerequis |
+|---|---|---|
+| `npm run ios -w mobile` | ouvre l'app dans **Expo Go** | aucun, c'est le chemin par defaut |
+| `npm run ios:native -w mobile` | compile un vrai binaire | **Xcode 26.4+** |
+| `npm run prebuild -w mobile` | regenere `mobile/ios` et `mobile/android` | — |
+
+Le projet natif a ete genere (`expo prebuild`), donc `mobile/ios/LaBonnePoire.xcworkspace`
+s'ouvre dans Xcode. **Il ne compile pas sous Xcode 26.1.1** : Expo SDK 57 construit
+`ExpoModulesJSI` depuis les sources a chaque build, sans binaire precompile de
+secours, et ce code utilise la syntaxe `weak let` qui n'existe qu'a partir de
+Swift 6.3 — donc Xcode 26.4 ou plus. Voir
+[expo/expo#46242](https://github.com/expo/expo/issues/46242).
+
+`mobile/ios/` et `mobile/android/` ne sont pas versionnes : `app.json` reste la
+source de verite et `expo prebuild --clean` les regenere. A versionner seulement
+le jour ou du code natif est ecrit a la main — il faudra alors arreter de lancer
+prebuild, qui les ecraserait.
+
+Le build natif deviendra obligatoire pour les **notifications push** : Expo Go ne
+recoit pas les notifications distantes.
+
 L'app derive l'adresse de l'API depuis l'hote du bundler Metro : sur un
 telephone physique, « localhost » designerait le telephone lui-meme. Pour
 pointer ailleurs (staging, Railway) :

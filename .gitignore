@@ -12,3 +12,10 @@ dist/
 prisma/dev.db
 .expo/
 expo-env.d.ts
+
+# Projet natif genere par `expo prebuild`. Non versionne : app.json reste la
+# source de verite, et un `expo prebuild --clean` le regenere a l'identique.
+# A versionner seulement le jour ou l'on ecrit du code natif a la main — il
+# faudra alors arreter de lancer prebuild, qui l'ecraserait.
+mobile/ios/
+mobile/android/
