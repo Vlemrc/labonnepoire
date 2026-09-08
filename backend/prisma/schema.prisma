@@ -54,7 +54,7 @@ model User {
   pseudo        String
   // Optionnel des le MVP : permet de brancher le magic link plus tard sans migration.
   email         String?  @unique
-  avatarConfig  Json
+  avatar        String   @default("alien")
   // On ne stocke jamais le token en clair.
   authTokenHash String   @unique
   createdAt     DateTime @default(now())

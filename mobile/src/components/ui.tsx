@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,8 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, font, radius, spacing } from "../theme";
-import { colorFor, emojiFor } from "../avatars/registry";
-import type { AvatarConfig } from "@poire/shared";
+import { avatarSource } from "../avatars/registry";
+
 
 export function Screen({
   children,
@@ -115,21 +116,13 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
   );
 }
 
-export function Avatar({ config, size = 44 }: { config: AvatarConfig; size?: number }) {
+export function Avatar({ avatar, size = 44 }: { avatar: string; size?: number }) {
   return (
-    <View
-      style={[
-        s.avatar,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colorFor(config.background),
-        },
-      ]}
-    >
-      <Text style={{ fontSize: size * 0.5 }}>{emojiFor(config.base)}</Text>
-    </View>
+    <Image
+      source={avatarSource(avatar)}
+      style={{ width: size, height: size, borderRadius: size / 2 }}
+      accessibilityIgnoresInvertColors
+    />
   );
 }
 
@@ -215,7 +208,6 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
   },
-  avatar: { alignItems: "center", justifyContent: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg },
   pill: {
     borderWidth: 1,

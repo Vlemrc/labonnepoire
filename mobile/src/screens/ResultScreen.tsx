@@ -66,7 +66,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
           </View>
           {answer.author ? (
             <View style={s.authorRow}>
-              <Avatar config={answer.author.avatarConfig} size={24} />
+              <Avatar avatar={answer.author.avatar} size={24} />
               <Body muted>Menti par {answer.author.pseudo}</Body>
             </View>
           ) : (
@@ -76,7 +76,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
             <View style={s.bets}>
               {answer.betsReceived.map((bet) => (
                 <View key={`${answer.id}-${bet.bettor.id}`} style={s.betChip}>
-                  <Avatar config={bet.bettor.avatarConfig} size={20} />
+                  <Avatar avatar={bet.bettor.avatar} size={20} />
                   <Text style={s.betAmount}>{bet.amount}</Text>
                 </View>
               ))}
@@ -91,7 +91,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
         <Label>Bilan</Label>
         {result.deltas.map((d) => (
           <View key={d.user.id} style={s.deltaRow}>
-            <Avatar config={d.user.avatarConfig} size={28} />
+            <Avatar avatar={d.user.avatar} size={28} />
             <Text style={s.deltaName}>{d.user.pseudo}</Text>
             <Text
               style={[

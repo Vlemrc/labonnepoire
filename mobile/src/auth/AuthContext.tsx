@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { AuthResponse, AvatarConfig, PublicUser } from "@poire/shared";
+import type { AuthResponse, AvatarId, PublicUser } from "@poire/shared";
 import { api } from "../api/client";
 import { getItem, removeItem, setItem } from "./storage";
 
@@ -10,8 +10,8 @@ interface AuthState {
   ready: boolean;
   token: string | null;
   user: PublicUser | null;
-  signUp: (pseudo: string, avatarConfig: AvatarConfig) => Promise<void>;
-  updateProfile: (patch: { pseudo?: string; avatarConfig?: AvatarConfig }) => Promise<void>;
+  signUp: (pseudo: string, avatar: AvatarId) => Promise<void>;
+  updateProfile: (patch: { pseudo?: string; avatar?: AvatarId }) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -47,10 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = useCallback(async (pseudo: string, avatarConfig: AvatarConfig) => {
+  const signUp = useCallback(async (pseudo: string, avatar: AvatarId) => {
     const res = await api<AuthResponse>("/auth/session", {
       method: "POST",
-      body: { pseudo, avatarConfig },
+      body: { pseudo, avatar },
     });
     await setItem(TOKEN_KEY, res.token);
     setToken(res.token);
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(
-    async (patch: { pseudo?: string; avatarConfig?: AvatarConfig }) => {
+    async (patch: { pseudo?: string; avatar?: AvatarId }) => {
       const res = await api<{ user: PublicUser }>("/auth/me", {
         method: "PATCH",
         body: patch,

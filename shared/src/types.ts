@@ -1,23 +1,18 @@
 // Types partages entre le backend et l'app mobile.
 // Volontairement independants de Prisma : ce sont les contrats de l'API HTTP.
 
+import type { AvatarId } from "./constants.js";
+
 export type SessionStatus = "LOBBY" | "IN_PROGRESS" | "FINISHED";
 export type RoundStatus = "WRITING" | "BETTING" | "RESOLVED" | "CANCELLED";
 export type RoundMode = "STANDARD" | "FULL_BLUFF";
 export type RoundRole = "BLUFFEUR" | "BETTOR";
 export type AnswerOrigin = "CARD" | "PLAYER";
 
-export interface AvatarConfig {
-  base: string;
-  skin: string;
-  accessories: string[];
-  background: string;
-}
-
 export interface PublicUser {
   id: string;
   pseudo: string;
-  avatarConfig: AvatarConfig;
+  avatar: AvatarId;
 }
 
 export interface GroupSettings {
@@ -41,7 +36,7 @@ export interface GroupSummary extends GroupSettings {
 export interface SessionPlayerView {
   userId: string;
   pseudo: string;
-  avatarConfig: AvatarConfig;
+  avatar: AvatarId;
   points: number;
   isEliminated: boolean;
   turnOrder: number;

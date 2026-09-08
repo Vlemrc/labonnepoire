@@ -1,4 +1,5 @@
-import type { AvatarConfig, SessionView } from "@poire/shared";
+import type { AvatarId, SessionView } from "@poire/shared";
+import { DEFAULT_AVATAR } from "@poire/shared";
 import { toRoundView } from "../rounds/serializers.js";
 import type { RoundWithRelations } from "../rounds/service.js";
 import type { SessionWithRelations } from "./service.js";
@@ -14,7 +15,7 @@ export function toSessionView(session: SessionWithRelations, viewerId: string): 
     players: session.players.map((p) => ({
       userId: p.userId,
       pseudo: p.user.pseudo,
-      avatarConfig: p.user.avatarConfig as unknown as AvatarConfig,
+      avatar: (p.user.avatar as AvatarId) ?? DEFAULT_AVATAR,
       points: p.points,
       isEliminated: p.isEliminated,
       turnOrder: p.turnOrder,

@@ -24,7 +24,7 @@ export default function Salons() {
     >
       {user ? (
         <View style={s.me}>
-          <Avatar config={user.avatarConfig} size={48} />
+          <Avatar avatar={user.avatar} size={48} />
           <View style={{ flex: 1 }}>
             <Title>{user.pseudo}</Title>
           </View>
@@ -56,7 +56,7 @@ export default function Salons() {
                 </Body>
                 <View style={s.avatars}>
                   {group.members.slice(0, 6).map((m) => (
-                    <Avatar key={m.id} config={m.avatarConfig} size={30} />
+                    <Avatar key={m.id} avatar={m.avatar} size={30} />
                   ))}
                 </View>
               </Card>

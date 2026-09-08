@@ -234,10 +234,22 @@ l'ecran bloque sur une phase revolue.
 round en cours, et s'arrete des que le round est resolu. C'est la solution de
 depart ; les notifications push restent indispensables (voir *Points ouverts*).
 
-**Avatars.** Le backend ne manipule que des identifiants (`renard`,
-`lunettes`…) et ignore l'apparence. `mobile/src/avatars/registry.ts` est le seul
-fichier a remplacer quand les vrais assets arrivent : aucun changement d'API,
-aucune migration.
+**Avatars.** Un joueur choisit une vignette parmi un catalogue fixe. Le backend
+ne stocke que son identifiant (`User.avatar`) et ignore totalement l'apparence :
+les images vivent dans `mobile/assets/avatars/`.
+
+Ajouter un avatar demande trois gestes, et aucune migration :
+
+1. poser le PNG dans `mobile/assets/avatars/`
+2. ajouter son identifiant a `AVATAR_IDS` dans `shared/src/constants.ts`
+3. ajouter une ligne dans `mobile/src/avatars/registry.ts` — Metro exige des
+   `require` statiques, le chemin ne peut pas etre construit a la volee
+
+> Les images actuelles viennent de `~/Documents/labonnepoire/avatars`,
+> redimensionnees a 512 px a la copie (les originaux font 1006 px, inutile pour
+> un affichage a 120 pt). **Quatre d'entre elles sont le meme fichier** :
+> `freezer`, `labubu`, `peach` et `t-rex` ont un MD5 identique, donc quatre
+> entrees du selecteur affichent le meme visage. A remplacer.
 
 Le dossier `game/` ne fait aucune I/O : tout entre par les arguments. C'est ce
 qui permet de tester l'integralite des regles sans base de donnees, et de les

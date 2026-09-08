@@ -109,7 +109,7 @@ function Cancelled({ round }: { round: RoundView }) {
           <Heading>Bilan</Heading>
           {deltas.map((d) => (
             <View key={d.user.id} style={s.row}>
-              <Avatar config={d.user.avatarConfig} size={28} />
+              <Avatar avatar={d.user.avatar} size={28} />
               <Text style={s.name}>{d.user.pseudo}</Text>
               <Text
                 style={[
@@ -158,7 +158,7 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
         ) : (
           pending.map((p) => (
             <View key={p.user.id} style={s.row}>
-              <Avatar config={p.user.avatarConfig} size={32} />
+              <Avatar avatar={p.user.avatar} size={32} />
               <Text style={s.name}>{p.user.pseudo}</Text>
               <Body muted>{p.role === "BLUFFEUR" ? "ecrit" : "mise"}</Body>
             </View>

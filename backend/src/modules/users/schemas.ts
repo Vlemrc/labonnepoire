@@ -1,18 +1,7 @@
 import { z } from "zod";
-import {
-  AVATAR_ACCESSORIES,
-  AVATAR_BACKGROUNDS,
-  AVATAR_BASES,
-  AVATAR_SKINS,
-  MAX_ACCESSORIES,
-} from "./avatars.js";
+import { AVATAR_IDS } from "@poire/shared";
 
-export const avatarConfigSchema = z.object({
-  base: z.enum(AVATAR_BASES),
-  skin: z.enum(AVATAR_SKINS),
-  background: z.enum(AVATAR_BACKGROUNDS),
-  accessories: z.array(z.enum(AVATAR_ACCESSORIES)).max(MAX_ACCESSORIES).default([]),
-});
+export const avatarSchema = z.enum(AVATAR_IDS);
 
 export const pseudoSchema = z
   .string()
@@ -22,6 +11,6 @@ export const pseudoSchema = z
 
 export const updateMeSchema = z.object({
   pseudo: pseudoSchema.optional(),
-  avatarConfig: avatarConfigSchema.optional(),
+  avatar: avatarSchema.optional(),
   email: z.string().email().optional().nullable(),
 });

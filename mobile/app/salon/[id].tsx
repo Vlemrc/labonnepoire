@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import type { RoundView, SessionView } from "@poire/shared";
+import type { PublicUser, RoundView, SessionView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useGroup, useSession, useStartRound, useStartSession } from "../../src/api/hooks";
 import {
@@ -107,13 +107,13 @@ export default function Salon() {
   }
 }
 
-function Lobby({ group }: { group: { members: { id: string; pseudo: string; avatarConfig: any }[] } }) {
+function Lobby({ group }: { group: { members: PublicUser[] } }) {
   return (
     <Card>
       <Heading>Joueurs ({group.members.length})</Heading>
       {group.members.map((m) => (
         <View key={m.id} style={st.playerRow}>
-          <Avatar config={m.avatarConfig} size={36} />
+          <Avatar avatar={m.avatar} size={36} />
           <Text style={st.playerName}>{m.pseudo}</Text>
         </View>
       ))}
@@ -131,7 +131,7 @@ function Scoreboard({ session, meId }: { session: SessionView; meId?: string }) 
       </View>
       {ranked.map((p) => (
         <View key={p.userId} style={[st.playerRow, p.isEliminated && st.eliminated]}>
-          <Avatar config={p.avatarConfig} size={36} />
+          <Avatar avatar={p.avatar} size={36} />
           <Text style={[st.playerName, p.userId === meId && st.me]}>
             {p.pseudo}
             {p.userId === meId ? " (toi)" : ""}
@@ -183,7 +183,7 @@ function RoundCard({ round }: { round: RoundView }) {
       <View style={st.waitingRow}>
         {round.participants.map((p) => (
           <View key={p.user.id} style={{ opacity: p.hasSubmitted ? 1 : 0.35 }}>
-            <Avatar config={p.user.avatarConfig} size={28} />
+            <Avatar avatar={p.user.avatar} size={28} />
           </View>
         ))}
       </View>
