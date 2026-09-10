@@ -158,7 +158,9 @@ function RoundCard({ round }: { round: RoundView }) {
     round.status === "WRITING"
       ? `${round.bluffeur.pseudo} prepare ses fausses reponses`
       : round.status === "BETTING"
-        ? `${waiting.length} joueur${waiting.length > 1 ? "s" : ""} n'ont pas encore mise`
+        ? waiting.length === 1
+          ? "1 joueur n'a pas encore mise"
+          : `${waiting.length} joueurs n'ont pas encore mise`
         : round.status === "CANCELLED"
           ? `Round annule : ${round.bluffeur.pseudo} n'a pas repondu a temps`
           : "Round termine";
@@ -174,12 +176,12 @@ function RoundCard({ round }: { round: RoundView }) {
               ? "bad"
               : round.status === "RESOLVED"
                 ? "muted"
-                : "info"
+                : "primary"
           }
         />
       </View>
       <Body muted>{status}</Body>
-      {round.twist ? <Pill text={`Twist : ${round.twist.label}`} tone="good" /> : null}
+      {round.twist ? <Pill text={`Twist : ${round.twist.label}`} tone="secondary" /> : null}
       <View style={st.waitingRow}>
         {round.participants.map((p) => (
           <View key={p.user.id} style={{ opacity: p.hasSubmitted ? 1 : 0.35 }}>

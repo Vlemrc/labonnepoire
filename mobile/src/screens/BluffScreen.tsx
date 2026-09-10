@@ -59,8 +59,8 @@ export function BluffScreen({ round }: { round: RoundView }) {
       </Card>
 
       {fullBluff ? (
-        <Card style={{ borderColor: colors.info }}>
-          <Pill text="Round special" tone="info" />
+        <Card style={{ borderColor: colors.secondary }}>
+          <Pill text="Round special" tone="secondary" />
           <Body>
             La vraie reponse ne sera pas proposee. Ecris trois mensonges : seuls
             les parieurs qui repondent « aucune de ces reponses » gagneront.

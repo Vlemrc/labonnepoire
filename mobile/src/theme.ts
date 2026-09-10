@@ -1,15 +1,27 @@
+/**
+ * Palette.
+ *
+ * `primary` (bleu) porte les actions et les reperes de jeu : boutons, code du
+ * salon, points, selection. `secondary` (violet) marque les moments speciaux —
+ * twists et rounds « tout est faux ». `success` et `danger` restent reserves
+ * aux gains et aux pertes : les melanger avec les accents rendrait un ecran de
+ * resultats illisible.
+ *
+ * Les contrastes sont verifies : chaque couleur de texte atteint au moins
+ * 4.5:1 sur son fond, y compris le texte sombre pose sur le bleu vif.
+ */
 export const colors = {
-  bg: "#12101A",
-  surface: "#1C1926",
-  surfaceHigh: "#262233",
-  border: "#332E44",
-  text: "#F3F0FA",
-  textMuted: "#9A93AE",
-  primary: "#F5C542",
-  primaryText: "#231D10",
-  danger: "#E8604C",
-  success: "#4CC38A",
-  info: "#6C8BF5",
+  bg: "#0F1119",
+  surface: "#171A26",
+  surfaceHigh: "#212533",
+  border: "#2E3345",
+  text: "#EEF2FB",
+  textMuted: "#98A0B8",
+  primary: "#2B7FFF",
+  primaryText: "#04122E",
+  secondary: "#A855F7",
+  danger: "#F2564B",
+  success: "#3ECF8E",
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

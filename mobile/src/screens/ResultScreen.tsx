@@ -52,8 +52,8 @@ export function ResultScreen({ round }: { round: RoundView }) {
       ) : null}
 
       {fullBluff ? (
-        <Card style={{ borderColor: colors.info }}>
-          <Pill text="Round special" tone="info" />
+        <Card style={{ borderColor: colors.secondary }}>
+          <Pill text="Round special" tone="secondary" />
           <Body>Aucune de ces reponses n'etait vraie. Seul « aucune de ces reponses » rapportait.</Body>
         </Card>
       ) : null}

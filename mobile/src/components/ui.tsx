@@ -149,9 +149,15 @@ export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => 
   );
 }
 
-export function Pill({ text, tone = "muted" }: { text: string; tone?: "muted" | "good" | "bad" | "info" }) {
-  const toneColor =
-    tone === "good" ? colors.success : tone === "bad" ? colors.danger : tone === "info" ? colors.info : colors.textMuted;
+export function Pill({ text, tone = "muted" }: { text: string; tone?: "muted" | "good" | "bad" | "primary" | "secondary" }) {
+  const TONES = {
+    good: colors.success,
+    bad: colors.danger,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    muted: colors.textMuted,
+  } as const;
+  const toneColor = TONES[tone];
   return (
     <View style={[s.pill, { borderColor: toneColor }]}>
       <Text style={[s.pillText, { color: toneColor }]}>{text}</Text>

@@ -142,8 +142,8 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
       <Body muted>{subtitle}</Body>
 
       {round.twist ? (
-        <Card style={{ borderColor: colors.success }}>
-          <Pill text={`Twist : ${round.twist.label}`} tone="good" />
+        <Card style={{ borderColor: colors.secondary }}>
+          <Pill text={`Twist : ${round.twist.label}`} tone="secondary" />
           <Body muted>{round.twist.description}</Body>
           {round.twist.activatedBy ? (
             <Body muted>Active par {round.twist.activatedBy.pseudo}.</Body>
