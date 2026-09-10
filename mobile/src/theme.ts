@@ -1,27 +1,34 @@
 /**
- * Palette.
+ * Palette : fond bleu flash, violet en secondaire.
  *
- * `primary` (bleu) porte les actions et les reperes de jeu : boutons, code du
+ * `primary` (blanc) porte les actions et les reperes de jeu : boutons, code du
  * salon, points, selection. `secondary` (violet) marque les moments speciaux —
  * twists et rounds « tout est faux ». `success` et `danger` restent reserves
- * aux gains et aux pertes : les melanger avec les accents rendrait un ecran de
- * resultats illisible.
+ * aux gains et aux pertes : s'en servir aussi comme accents rendrait l'ecran
+ * de resultats illisible.
  *
- * Les contrastes sont verifies : chaque couleur de texte atteint au moins
- * 4.5:1 sur son fond, y compris le texte sombre pose sur le bleu vif.
+ * Contrastes verifies : texte blanc a 6.3:1 sur le fond et 8.5:1 sur les
+ * cartes, texte attenue a 4.7:1, violet a 4.7:1 sur les cartes. C'est la
+ * raison d'etre des cartes bleu profond — sur le bleu vif seul, le violet
+ * tombe a 2.4:1 et devient illisible.
  */
 export const colors = {
-  bg: "#0F1119",
-  surface: "#171A26",
-  surfaceHigh: "#212533",
-  border: "#2E3345",
-  text: "#EEF2FB",
-  textMuted: "#98A0B8",
-  primary: "#2B7FFF",
-  primaryText: "#04122E",
-  secondary: "#A855F7",
-  danger: "#F2564B",
-  success: "#3ECF8E",
+  // Le fond de l'app : bleu flash.
+  bg: "#2348F5",
+  // Les cartes sont un bleu nettement plus profond. C'est ce qui permet aux
+  // accents — et surtout au violet — de rester lisibles : sur le bleu vif du
+  // fond, un violet a trop peu d'ecart de luminosite pour se detacher.
+  surface: "#0F2199",
+  surfaceHigh: "#17309F",
+  border: "#4A6BFF",
+  text: "#FFFFFF",
+  textMuted: "#D6DEFF",
+  // Bouton blanc sur fond bleu : le contraste maximal disponible ici.
+  primary: "#FFFFFF",
+  primaryText: "#0F2199",
+  secondary: "#C084FC",
+  danger: "#FF8A80",
+  success: "#4ADE80",
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;

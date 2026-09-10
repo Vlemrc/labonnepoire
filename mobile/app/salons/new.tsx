@@ -142,7 +142,7 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  themeActive: { borderColor: colors.primary, backgroundColor: colors.surfaceHigh },
+  themeActive: { borderColor: colors.secondary, backgroundColor: colors.surfaceHigh },
   themeLabel: { color: colors.textMuted, fontWeight: "600" },
   themeLabelActive: { color: colors.text },
   themeCount: { color: colors.textMuted, fontSize: 12 },

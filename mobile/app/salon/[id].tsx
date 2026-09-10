@@ -199,7 +199,7 @@ const st = StyleSheet.create({
   playerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   playerName: { ...font.body, color: colors.text, flex: 1 },
   me: { fontWeight: "800" },
-  points: { ...font.heading, color: colors.primary },
+  points: { ...font.heading, color: colors.secondary },
   eliminated: { opacity: 0.45 },
   waitingRow: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },

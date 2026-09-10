@@ -72,6 +72,6 @@ const s = StyleSheet.create({
   me: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   signOut: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  code: { color: colors.primary, fontWeight: "800", letterSpacing: 2 },
+  code: { color: colors.secondary, fontWeight: "800", letterSpacing: 2 },
   avatars: { flexDirection: "row", gap: spacing.xs },
 });

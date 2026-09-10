@@ -49,7 +49,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
         au profit des autres.
       </Body>
 
-      <Card style={{ borderColor: colors.primary }}>
+      <Card style={{ borderColor: colors.secondary }}>
         <Label>La question</Label>
         <Heading>{round.card?.question}</Heading>
         <View style={s.truth}>

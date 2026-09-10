@@ -93,7 +93,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
         return (
           <Card
             key={option.key}
-            style={amount > 0 ? { borderColor: colors.primary } : undefined}
+            style={amount > 0 ? { borderColor: colors.secondary } : undefined}
           >
             {option.isNone ? <Label>Pari risque</Label> : null}
             <Heading>{option.text}</Heading>

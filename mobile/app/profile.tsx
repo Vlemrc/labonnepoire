@@ -141,6 +141,6 @@ const s = StyleSheet.create({
     borderColor: "transparent",
     backgroundColor: colors.surface,
   },
-  optionSelected: { borderColor: colors.primary, backgroundColor: colors.surfaceHigh },
+  optionSelected: { borderColor: colors.secondary, backgroundColor: colors.surfaceHigh },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

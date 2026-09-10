@@ -248,12 +248,19 @@ l'ecran bloque sur une phase revolue.
 round en cours, et s'arrete des que le round est resolu. C'est la solution de
 depart ; les notifications push restent indispensables (voir *Points ouverts*).
 
-**Couleurs.** Toute la palette vit dans `mobile/src/theme.ts`. Le bleu porte
-les actions et les reperes de jeu (boutons, code du salon, points, selection),
-le violet marque les moments speciaux (twists, rounds « tout est faux »). Vert
-et rouge restent reserves aux gains et aux pertes : s'en servir aussi comme
-accents rendrait l'ecran de resultats illisible. Les contrastes sont verifies,
-chaque couleur de texte atteint au moins 4.5:1 sur son fond.
+**Couleurs.** Toute la palette vit dans `mobile/src/theme.ts` : fond bleu
+flash, violet en secondaire, boutons blancs.
+
+Les cartes sont d'un bleu nettement plus profond que le fond, et ce n'est pas
+un choix esthetique. Bleu et violet sont voisins et de luminosite proche : pose
+directement sur le bleu vif, le violet tombe a 2.4:1 et devient illisible. Sur
+les cartes il remonte a 4.7:1. Tout ce qui est violet vit donc sur une carte —
+points du classement, code du salon dans la liste, twists, rounds speciaux,
+bordures de selection. Ce qui repose sur le fond bleu reste blanc : le code du
+salon en en-tete, le budget de mise.
+
+Vert et rouge restent reserves aux gains et aux pertes : s'en servir aussi
+comme accents rendrait l'ecran de resultats illisible.
 
 **Avatars.** Un joueur choisit une vignette parmi un catalogue fixe. Le backend
 ne stocke que son identifiant (`User.avatar`) et ignore totalement l'apparence :
