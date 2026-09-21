@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { PublicUser, RoundView, SessionView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
+import { shareInviteCode } from "../../src/lib/share";
 import { useGroup, useSession, useStartRound, useStartSession } from "../../src/api/hooks";
 import {
   Avatar,
@@ -26,6 +28,7 @@ export default function Salon() {
   const session = useSession(group.data?.activeSessionId ?? undefined);
   const startSession = useStartSession();
   const startRound = useStartRound();
+  const [shareNote, setShareNote] = useState<string | null>(null);
 
   if (group.isPending) return <Loading />;
   if (group.error) return <ErrorView error={group.error} onRetry={() => void group.refetch()} />;
@@ -40,9 +43,26 @@ export default function Salon() {
     <Screen footer={<Footer />}>
       <View style={st.header}>
         <Title>{g.name}</Title>
-        <Text style={st.code}>{g.code}</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Partager le code ${g.code}`}
+          onPress={async () => {
+            const outcome = await shareInviteCode(g.code, g.name);
+            setShareNote(
+              outcome === "copied"
+                ? "Code copie."
+                : outcome === "failed"
+                  ? "Partage annule."
+                  : null,
+            );
+          }}
+          style={({ pressed }) => [st.codeChip, pressed && { opacity: 0.7 }]}
+        >
+          <Text style={st.code}>{g.code}</Text>
+          <Text style={st.codeHint}>Partager</Text>
+        </Pressable>
       </View>
-      <Body muted>Partage ce code pour inviter du monde.</Body>
+      <Body muted>{shareNote ?? "Appuie sur le code pour l'envoyer a tes amis."}</Body>
 
       {s ? <Scoreboard session={s} meId={user?.id} /> : <Lobby group={g} />}
 
@@ -195,7 +215,17 @@ function RoundCard({ round }: { round: RoundView }) {
 
 const st = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  codeChip: {
+    alignItems: "flex-end",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   code: { ...font.heading, color: colors.primary, letterSpacing: 3 },
+  codeHint: { fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 },
   playerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   playerName: { ...font.body, color: colors.text, flex: 1 },
   me: { fontWeight: "800" },
