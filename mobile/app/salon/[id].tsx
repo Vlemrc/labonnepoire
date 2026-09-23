@@ -18,7 +18,7 @@ import {
   Screen,
   Title,
 } from "../../src/components/ui";
-import { colors, font, spacing } from "../../src/theme";
+import { colors, font, fonts, spacing, sticker } from "../../src/theme";
 
 export default function Salon() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -215,20 +215,29 @@ function RoundCard({ round }: { round: RoundView }) {
 
 const st = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  // Tampon de travers : le code doit avoir l'air pose a la main sur le salon.
   codeChip: {
-    alignItems: "flex-end",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.secondary,
     backgroundColor: colors.surface,
+    transform: [{ rotate: "-2.5deg" }],
+    ...sticker,
   },
-  code: { ...font.heading, color: colors.primary, letterSpacing: 3 },
-  codeHint: { fontSize: 11, fontWeight: "700", color: colors.textMuted, textTransform: "uppercase", letterSpacing: 1 },
+  code: { ...font.mono, fontSize: 22, color: colors.secondary },
+  codeHint: {
+    fontFamily: fonts.display,
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
   playerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   playerName: { ...font.body, color: colors.text, flex: 1 },
-  me: { fontWeight: "800" },
+  me: { fontFamily: fonts.bodyBold },
   points: { ...font.heading, color: colors.secondary },
   eliminated: { opacity: 0.45 },
   waitingRow: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs },

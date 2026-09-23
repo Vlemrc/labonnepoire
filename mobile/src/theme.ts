@@ -35,10 +35,43 @@ export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 
 export const radius = { sm: 8, md: 14, lg: 22, pill: 999 } as const;
 
+/**
+ * Typographie.
+ *
+ * Bricolage Grotesque porte les titres : une grotesque contemporaine au dessin
+ * marque, qui donne au jeu une tete a lui. Outfit assure la lecture courante.
+ * Space Mono est reserve au code du salon — une vraie chasse fixe, pour que les
+ * caracteres s'alignent et se dictent sans ambiguite.
+ *
+ * Avec des polices chargees, on ne declare JAMAIS de fontWeight : iOS
+ * fabriquerait une fausse graisse par-dessus la vraie. La graisse se choisit en
+ * nommant la variante.
+ */
+export const fonts = {
+  display: "BricolageGrotesque_800ExtraBold",
+  displaySemi: "BricolageGrotesque_600SemiBold",
+  body: "Outfit_500Medium",
+  bodySemi: "Outfit_600SemiBold",
+  bodyBold: "Outfit_700Bold",
+  mono: "SpaceMono_700Bold",
+} as const;
+
 export const font = {
-  title: { fontSize: 26, fontWeight: "800" },
-  heading: { fontSize: 19, fontWeight: "700" },
-  body: { fontSize: 16, fontWeight: "500" },
-  label: { fontSize: 13, fontWeight: "600" },
-  mono: { fontSize: 28, fontWeight: "800", letterSpacing: 4 },
+  title: { fontFamily: fonts.display, fontSize: 32, letterSpacing: -1 },
+  heading: { fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.4 },
+  body: { fontFamily: fonts.body, fontSize: 16 },
+  label: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1.4 },
+  mono: { fontFamily: fonts.mono, fontSize: 26, letterSpacing: 2 },
+} as const;
+
+/**
+ * Ombre portee franche, sans flou : les cartes se posent comme des cartons sur
+ * une table plutot que de flotter. C'est ce qui donne au jeu son air de jeu.
+ */
+export const sticker = {
+  shadowColor: "#08165E",
+  shadowOpacity: 1,
+  shadowRadius: 0,
+  shadowOffset: { width: 3, height: 5 },
+  elevation: 6,
 } as const;

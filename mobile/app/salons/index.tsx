@@ -3,7 +3,7 @@ import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useGroups } from "../../src/api/hooks";
 import { Avatar, Body, Button, Card, ErrorView, Heading, Loading, Screen, Title } from "../../src/components/ui";
-import { colors, spacing } from "../../src/theme";
+import { colors, font, spacing } from "../../src/theme";
 
 export default function Salons() {
   const { user, signOut } = useAuth();
@@ -72,6 +72,6 @@ const s = StyleSheet.create({
   me: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   signOut: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  code: { color: colors.secondary, fontWeight: "800", letterSpacing: 2 },
+  code: { ...font.mono, fontSize: 15, color: colors.secondary },
   avatars: { flexDirection: "row", gap: spacing.xs },
 });

@@ -6,7 +6,7 @@ import { useCreateGroup, useThemes } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth/AuthContext";
 import { usePendingSalon } from "../../src/onboarding/PendingSalon";
 import { Body, Button, ErrorView, Field, Label, Loading, Screen, Title } from "../../src/components/ui";
-import { colors, radius, spacing } from "../../src/theme";
+import { colors, fonts, radius, spacing } from "../../src/theme";
 
 const THEME_LABELS: Record<string, string> = {
   animaux: "Animaux",
@@ -143,7 +143,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   themeActive: { borderColor: colors.secondary, backgroundColor: colors.surfaceHigh },
-  themeLabel: { color: colors.textMuted, fontWeight: "600" },
+  themeLabel: { fontFamily: fonts.bodySemi, color: colors.textMuted },
   themeLabelActive: { color: colors.text },
   themeCount: { color: colors.textMuted, fontSize: 12 },
   row: { flexDirection: "row", gap: spacing.md },

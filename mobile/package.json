@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@poire/shared": "*",
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+    "@expo-google-fonts/outfit": "^0.4.3",
+    "@expo-google-fonts/space-mono": "^0.4.2",
     "@expo/metro-runtime": "~57.0.15",
+    "@poire/shared": "*",
     "@tanstack/react-query": "^5.102.8",
     "expo": "~57.0.20",
     "expo-constants": "~57.0.17",

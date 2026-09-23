@@ -5,7 +5,7 @@ import type { RoundView } from "@poire/shared";
 import { useAuth } from "../auth/AuthContext";
 import { useReportCard } from "../api/hooks";
 import { Avatar, Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
-import { colors, spacing } from "../theme";
+import { colors, fonts, spacing } from "../theme";
 
 export function ResultScreen({ round }: { round: RoundView }) {
   const router = useRouter();
@@ -127,14 +127,14 @@ export function ResultScreen({ round }: { round: RoundView }) {
 }
 
 const s = StyleSheet.create({
-  bigDelta: { fontSize: 40, fontWeight: "800" },
+  bigDelta: { fontFamily: fonts.display, fontSize: 44 },
   answerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   authorRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   bets: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
   betChip: { flexDirection: "row", alignItems: "center", gap: 4 },
-  betAmount: { color: colors.text, fontWeight: "700" },
+  betAmount: { fontFamily: fonts.display, fontSize: 14, color: colors.text },
   deltaRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   deltaName: { flex: 1, color: colors.text, fontSize: 16 },
-  delta: { fontSize: 16, fontWeight: "800", minWidth: 40, textAlign: "right" },
+  delta: { fontFamily: fonts.display, fontSize: 17, minWidth: 40, textAlign: "right" },
   after: { color: colors.textMuted, fontSize: 14, minWidth: 32, textAlign: "right" },
 });

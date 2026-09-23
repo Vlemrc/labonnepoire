@@ -19,7 +19,7 @@ import {
   Title,
 } from "../../src/components/ui";
 import { Deadline } from "../../src/components/Deadline";
-import { colors, spacing } from "../../src/theme";
+import { colors, fonts, spacing } from "../../src/theme";
 
 /**
  * Point d'entree unique d'un round.
@@ -186,7 +186,7 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },
-  bigDelta: { fontSize: 40, fontWeight: "800" },
-  delta: { fontSize: 16, fontWeight: "800", minWidth: 40, textAlign: "right" },
+  bigDelta: { fontFamily: fonts.display, fontSize: 44 },
+  delta: { fontFamily: fonts.display, fontSize: 17, minWidth: 40, textAlign: "right" },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

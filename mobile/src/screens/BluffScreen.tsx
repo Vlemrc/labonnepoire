@@ -4,7 +4,7 @@ import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
 import { Body, Button, Card, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
-import { colors, spacing } from "../theme";
+import { colors, fonts, spacing } from "../theme";
 
 /**
  * Ecran du bluffeur : il voit la carte, vraie reponse comprise, et invente les
@@ -99,6 +99,6 @@ const s = StyleSheet.create({
     borderTopColor: colors.border,
     gap: spacing.xs,
   },
-  truthText: { fontSize: 18, fontWeight: "700", color: colors.success },
+  truthText: { fontFamily: fonts.display, fontSize: 19, color: colors.success },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

@@ -4,7 +4,7 @@ import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
 import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
-import { colors, radius, spacing } from "../theme";
+import { colors, fonts, radius, spacing, sticker } from "../theme";
 
 const NONE_KEY = "__none__";
 
@@ -88,15 +88,27 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
         laisses passer le delai, tu les perds tous.
       </Body>
 
-      {options.map((option) => {
+      {options.map((option, index) => {
         const amount = amounts[option.key] ?? 0;
         return (
-          <Card
+          <View
             key={option.key}
-            style={amount > 0 ? { borderColor: colors.secondary } : undefined}
+            // Les propositions sont posees de travers, comme des cartes jetees
+            // sur une table. L'angle alterne pour qu'aucune ne semble alignee.
+            style={{ transform: [{ rotate: `${(index % 2 === 0 ? -1 : 1) * 1.1}deg` }] }}
           >
-            {option.isNone ? <Label>Pari risque</Label> : null}
-            <Heading>{option.text}</Heading>
+          <Card style={amount > 0 ? { borderColor: colors.secondary } : undefined}>
+            <View style={s.optionHead}>
+              <View style={[s.index, amount > 0 && s.indexActive]}>
+                <Text style={[s.indexText, amount > 0 && s.indexTextActive]}>
+                  {option.isNone ? "?" : index + 1}
+                </Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                {option.isNone ? <Label>Pari risque</Label> : null}
+                <Heading>{option.text}</Heading>
+              </View>
+            </View>
             <View style={s.stepper}>
               <StepperButton label="−" onPress={() => change(option.key, -1)} disabled={amount === 0} />
               <Text style={s.amount}>{amount}</Text>
@@ -116,6 +128,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
               ) : null}
             </View>
           </Card>
+          </View>
         );
       })}
     </Screen>
@@ -148,21 +161,41 @@ function StepperButton({
 const s = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
   budget: { alignItems: "center" },
-  budgetValue: { fontSize: 34, fontWeight: "800", color: colors.primary },
-  stepper: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.xs },
-  step: {
-    width: 44,
-    height: 44,
+  budgetValue: {
+    fontFamily: fonts.display,
+    fontSize: 40,
+    lineHeight: 42,
+    color: colors.primary,
+  },
+  optionHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  index: {
+    width: 34,
+    height: 34,
     borderRadius: radius.pill,
-    backgroundColor: colors.surfaceHigh,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
+    backgroundColor: colors.surfaceHigh,
     alignItems: "center",
     justifyContent: "center",
   },
+  indexActive: { borderColor: colors.secondary, backgroundColor: colors.secondary },
+  indexText: { fontFamily: fonts.display, fontSize: 16, color: colors.textMuted },
+  indexTextActive: { color: colors.surface },
+  stepper: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.xs },
+  step: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    ...sticker,
+  },
   stepDisabled: { opacity: 0.3 },
-  stepLabel: { fontSize: 22, fontWeight: "700", color: colors.text, lineHeight: 26 },
-  amount: { fontSize: 22, fontWeight: "800", color: colors.text, minWidth: 32, textAlign: "center" },
+  stepLabel: { fontFamily: fonts.display, fontSize: 22, color: colors.text, lineHeight: 26 },
+  amount: { fontFamily: fonts.display, fontSize: 24, color: colors.text, minWidth: 34, textAlign: "center" },
   allIn: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

@@ -4,10 +4,21 @@ import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_800ExtraBold,
+} from "@expo-google-fonts/bricolage-grotesque";
+import {
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
+import { SpaceMono_700Bold } from "@expo-google-fonts/space-mono";
+import { useFonts } from "expo-font";
 import { AuthProvider, useAuth } from "../src/auth/AuthContext";
 import { PendingSalonProvider } from "../src/onboarding/PendingSalon";
 import { Loading } from "../src/components/ui";
-import { colors } from "../src/theme";
+import { colors, fonts } from "../src/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,7 +101,7 @@ function AuthGate() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: "700" },
+        headerTitleStyle: { fontFamily: fonts.display },
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -107,6 +118,19 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    BricolageGrotesque_800ExtraBold,
+    BricolageGrotesque_600SemiBold,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    SpaceMono_700Bold,
+  });
+
+  // On n'affiche rien tant que les polices ne sont pas la : sinon l'ecran se
+  // dessine en police systeme puis saute de mise en page au chargement.
+  if (!fontsLoaded) return <Loading label="Ouverture…" />;
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

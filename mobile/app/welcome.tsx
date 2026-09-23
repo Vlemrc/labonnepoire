@@ -1,12 +1,16 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AVATAR_IDS } from "../src/avatars/registry";
-import { Avatar, Body, Button, Screen, Title } from "../src/components/ui";
-import { colors, spacing } from "../src/theme";
+import { Avatar, Body, Button, Screen } from "../src/components/ui";
+import { colors, fonts, radius, spacing, sticker } from "../src/theme";
 
 /**
  * Ecran d'arrivee. Aucun compte requis : on demande d'abord ce que le joueur
  * veut faire, et le profil ne vient qu'une fois le salon choisi.
+ *
+ * Mise en page volontairement bancale — titre enorme coupe en trois, vignettes
+ * en eventail, pastilles de travers. C'est un jeu d'ambiance : un alignement
+ * parfait le ferait passer pour un utilitaire.
  */
 export default function Welcome() {
   const router = useRouter();
@@ -25,35 +29,91 @@ export default function Welcome() {
       }
     >
       <View style={s.hero}>
-        <Title>La Bonne Poire</Title>
-        <Body muted>
-          Un joueur connait la vraie reponse et invente des mensonges. Les autres
-          repartissent leurs jetons sur ce qui leur semble vrai. Celui qui se
-          fait avoir paie.
-        </Body>
+        <Text style={s.heroLine}>LA</Text>
+        <Text style={[s.heroLine, s.heroLineShift]}>BONNE</Text>
+        <Text style={[s.heroLine, s.heroAccent]}>POIRE</Text>
       </View>
 
-      <View style={s.avatars}>
-        {AVATAR_IDS.map((id) => (
-          <Avatar key={id} avatar={id} size={46} />
+      <View style={s.fan}>
+        {AVATAR_IDS.map((id, i) => (
+          <View
+            key={id}
+            style={[
+              s.fanItem,
+              {
+                // Eventail : rotation croissante de part et d'autre du centre,
+                // et les cartes se chevauchent comme une main de cartes.
+                transform: [{ rotate: `${(i - (AVATAR_IDS.length - 1) / 2) * 5}deg` }],
+                marginLeft: i === 0 ? 0 : -14,
+                marginTop: Math.abs(i - (AVATAR_IDS.length - 1) / 2) * 4,
+              },
+            ]}
+          >
+            <Avatar avatar={id} size={52} />
+          </View>
         ))}
       </View>
 
-      <Body muted>Cree un salon et partage son code, ou rejoins celui d'un ami.</Body>
+      <View style={s.pitch}>
+        <View style={[s.tag, s.tagLeft]}>
+          <Text style={s.tagText}>1 ment</Text>
+        </View>
+        <View style={[s.tag, s.tagRight]}>
+          <Text style={s.tagText}>les autres misent</Text>
+        </View>
+      </View>
+
+      <Body muted>
+        Un joueur connait la vraie reponse et invente des mensonges. Les autres
+        repartissent leurs jetons sur ce qui leur semble vrai. Celui qui se fait
+        avoir paie.
+      </Body>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  hero: { gap: spacing.sm, paddingTop: spacing.xl },
-  avatars: {
+  hero: { paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  heroLine: {
+    fontFamily: fonts.display,
+    fontSize: 54,
+    lineHeight: 52,
+    letterSpacing: -2.5,
+    color: colors.text,
+  },
+  heroLineShift: { marginLeft: spacing.lg },
+  heroAccent: { color: colors.secondary, marginLeft: spacing.sm },
+  fan: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
     justifyContent: "center",
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    alignItems: "center",
+    paddingVertical: spacing.md,
+  },
+  fanItem: {
+    borderRadius: radius.pill,
+    borderWidth: 2,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 3,
+    ...sticker,
+  },
+  pitch: { flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.xs },
+  tag: {
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    ...sticker,
+  },
+  tagLeft: { transform: [{ rotate: "-3deg" }] },
+  tagRight: { transform: [{ rotate: "2.5deg" }], borderColor: colors.secondary },
+  tagText: {
+    fontFamily: fonts.display,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: colors.text,
   },
 });

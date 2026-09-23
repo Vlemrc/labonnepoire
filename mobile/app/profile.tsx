@@ -8,7 +8,7 @@ import { useAuth } from "../src/auth/AuthContext";
 import { usePendingSalon } from "../src/onboarding/PendingSalon";
 import { AVATAR_IDS, AVATAR_LABELS, DEFAULT_AVATAR, type AvatarId } from "../src/avatars/registry";
 import { Avatar, Body, Button, Field, Label, Screen, Title } from "../src/components/ui";
-import { colors, radius, spacing } from "../src/theme";
+import { colors, fonts, radius, spacing } from "../src/theme";
 
 /**
  * Dernier ecran avant d'entrer dans le salon : pseudo et avatar.
@@ -132,7 +132,7 @@ export default function Profile() {
 
 const s = StyleSheet.create({
   preview: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
-  previewName: { fontSize: 15, fontWeight: "700", color: colors.textMuted },
+  previewName: { fontFamily: fonts.display, fontSize: 15, color: colors.textMuted },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   option: {
     padding: 4,

@@ -262,6 +262,24 @@ salon en en-tete, le budget de mise.
 Vert et rouge restent reserves aux gains et aux pertes : s'en servir aussi
 comme accents rendrait l'ecran de resultats illisible.
 
+**Typographie.** Trois familles, chargees au demarrage via `expo-font` :
+**Bricolage Grotesque** pour les titres, boutons et chiffres — une grotesque au
+dessin marque qui donne au jeu une tete a lui ; **Outfit** pour la lecture
+courante ; **Space Mono** pour le code du salon, une vraie chasse fixe, pour que
+les caracteres s'alignent et se dictent sans ambiguite.
+
+Regle a ne pas oublier : avec des polices chargees, **jamais de `fontWeight`**.
+iOS fabriquerait une fausse graisse par-dessus la vraie. La graisse se choisit
+en nommant la variante (`fonts.display`, `fonts.bodySemi`…).
+
+**Habillage.** Les cartes portent une bordure de 2 px et une ombre portee
+franche sans flou (`sticker` dans le theme) : elles se posent comme des cartons
+sur une table au lieu de flotter. Les boutons s'enfoncent au toucher — l'ombre
+disparait et le bouton descend d'autant. Plusieurs elements sont legerement de
+travers (propositions de mise, tampon du code, vignettes en eventail sur
+l'accueil) : c'est un jeu d'ambiance, un alignement parfait le ferait passer
+pour un utilitaire.
+
 **Avatars.** Un joueur choisit une vignette parmi un catalogue fixe. Le backend
 ne stocke que son identifiant (`User.avatar`) et ignore totalement l'apparence :
 les images vivent dans `mobile/assets/avatars/`.
