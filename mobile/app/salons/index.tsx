@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useGroups } from "../../src/api/hooks";
+import { Appear } from "../../src/components/Appear";
 import { Avatar, Body, Button, Card, ErrorView, Heading, Loading, Screen, Title } from "../../src/components/ui";
 import { colors, font, spacing } from "../../src/theme";
 
@@ -42,8 +43,9 @@ export default function Salons() {
           </Body>
         </Card>
       ) : (
-        groups.map((group) => (
-          <Link key={group.id} href={`/salon/${group.id}`} asChild>
+        groups.map((group, i) => (
+          <Appear key={group.id} index={i}>
+          <Link href={`/salon/${group.id}`} asChild>
             <Pressable accessibilityRole="button">
               <Card>
                 <View style={s.groupHeader}>
@@ -62,6 +64,7 @@ export default function Salons() {
               </Card>
             </Pressable>
           </Link>
+          </Appear>
         ))
       )}
     </Screen>

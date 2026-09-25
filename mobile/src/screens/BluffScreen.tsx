@@ -2,6 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
+import { Appear } from "../components/Appear";
 import { Body, Button, Card, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
 import { colors, fonts, spacing } from "../theme";
@@ -49,6 +50,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
         au profit des autres.
       </Body>
 
+      <Appear index={0}>
       <Card style={{ borderColor: colors.secondary }}>
         <Label>La question</Label>
         <Heading>{round.card?.question}</Heading>
@@ -57,6 +59,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
           <Text style={s.truthText}>{round.card?.trueAnswer}</Text>
         </View>
       </Card>
+      </Appear>
 
       {fullBluff ? (
         <Card style={{ borderColor: colors.secondary }}>
@@ -75,8 +78,8 @@ export function BluffScreen({ round }: { round: RoundView }) {
       )}
 
       {answers.map((value, index) => (
+        <Appear key={index} index={1 + index}>
         <Field
-          key={index}
           label={`Mensonge ${index + 1}`}
           value={value}
           onChangeText={(text) =>
@@ -85,6 +88,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
           placeholder="Une reponse plausible…"
           maxLength={200}
         />
+        </Appear>
       ))}
     </Screen>
   );

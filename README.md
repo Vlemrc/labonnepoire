@@ -280,6 +280,22 @@ travers (propositions de mise, tampon du code, vignettes en eventail sur
 l'accueil) : c'est un jeu d'ambiance, un alignement parfait le ferait passer
 pour un utilitaire.
 
+**Animations d'apparition.** `src/components/Appear.tsx` enveloppe un element
+et le fait monter en fondu, avec un decalage par `index` pour qu'une liste
+entre en cascade plutot que d'un bloc. Utilise la ou le rythme sert le jeu :
+revelation des reponses sur l'ecran de resultats, distribution des propositions
+de mise, arrivee du titre et des vignettes sur l'accueil.
+
+Deux points a ne pas defaire :
+
+- Il s'appuie sur l'API `Animated` **du coeur de React Native**, pas sur les
+  animations d'entree de Reanimated. Ces dernieres ne se declenchent pas de
+  facon fiable sur le web pour un composant monte apres le premier rendu :
+  l'ecran reste vide alors que le contenu est bien present dans le DOM.
+  Constate sur l'ecran de resultats, qui passe par un ecran de chargement.
+- Le reglage systeme de reduction des animations est respecte : il ne reste
+  alors qu'un fondu, sans mouvement.
+
 **Avatars.** Un joueur choisit une vignette parmi un catalogue fixe. Le backend
 ne stocke que son identifiant (`User.avatar`) et ignore totalement l'apparence :
 les images vivent dans `mobile/assets/avatars/`.

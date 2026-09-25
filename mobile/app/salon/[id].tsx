@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { PublicUser, RoundView, SessionView } from "@poire/shared";
+import { Appear } from "../../src/components/Appear";
 import { useAuth } from "../../src/auth/AuthContext";
 import { shareInviteCode } from "../../src/lib/share";
 import { useGroup, useSession, useStartRound, useStartSession } from "../../src/api/hooks";
@@ -64,9 +65,15 @@ export default function Salon() {
       </View>
       <Body muted>{shareNote ?? "Appuie sur le code pour l'envoyer a tes amis."}</Body>
 
-      {s ? <Scoreboard session={s} meId={user?.id} /> : <Lobby group={g} />}
+      <Appear index={0}>
+        {s ? <Scoreboard session={s} meId={user?.id} /> : <Lobby group={g} />}
+      </Appear>
 
-      {round ? <RoundCard round={round} /> : null}
+      {round ? (
+        <Appear index={1}>
+          <RoundCard round={round} />
+        </Appear>
+      ) : null}
     </Screen>
   );
 

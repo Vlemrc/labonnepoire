@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AVATAR_IDS } from "../src/avatars/registry";
+import { Appear } from "../src/components/Appear";
 import { Avatar, Body, Button, Screen } from "../src/components/ui";
 import { colors, fonts, radius, spacing, sticker } from "../src/theme";
 
@@ -29,15 +30,26 @@ export default function Welcome() {
       }
     >
       <View style={s.hero}>
-        <Text style={s.heroLine}>LA</Text>
-        <Text style={[s.heroLine, s.heroLineShift]}>BONNE</Text>
-        <Text style={[s.heroLine, s.heroAccent]}>POIRE</Text>
+        {["LA", "BONNE", "POIRE"].map((word, i) => (
+          <Appear key={word} index={i}>
+            <Text
+              style={[
+                s.heroLine,
+                i === 1 && s.heroLineShift,
+                i === 2 && s.heroAccent,
+              ]}
+            >
+              {word}
+            </Text>
+          </Appear>
+        ))}
       </View>
 
       <View style={s.fan}>
         {AVATAR_IDS.map((id, i) => (
-          <View
+          <Appear
             key={id}
+            index={3 + i}
             style={[
               s.fanItem,
               {
@@ -50,17 +62,17 @@ export default function Welcome() {
             ]}
           >
             <Avatar avatar={id} size={52} />
-          </View>
+          </Appear>
         ))}
       </View>
 
       <View style={s.pitch}>
-        <View style={[s.tag, s.tagLeft]}>
+        <Appear index={11} style={[s.tag, s.tagLeft]}>
           <Text style={s.tagText}>1 ment</Text>
-        </View>
-        <View style={[s.tag, s.tagRight]}>
+        </Appear>
+        <Appear index={12} style={[s.tag, s.tagRight]}>
           <Text style={s.tagText}>les autres misent</Text>
-        </View>
+        </Appear>
       </View>
 
       <Body muted>

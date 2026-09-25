@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
+import { Appear } from "../components/Appear";
 import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
 import { colors, fonts, radius, spacing, sticker } from "../theme";
@@ -91,8 +92,9 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
       {options.map((option, index) => {
         const amount = amounts[option.key] ?? 0;
         return (
-          <View
+          <Appear
             key={option.key}
+            index={index}
             // Les propositions sont posees de travers, comme des cartes jetees
             // sur une table. L'angle alterne pour qu'aucune ne semble alignee.
             style={{ transform: [{ rotate: `${(index % 2 === 0 ? -1 : 1) * 1.1}deg` }] }}
@@ -128,7 +130,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
               ) : null}
             </View>
           </Card>
-          </View>
+          </Appear>
         );
       })}
     </Screen>

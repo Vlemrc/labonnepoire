@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import type { RoundView } from "@poire/shared";
 import { useAuth } from "../auth/AuthContext";
 import { useReportCard } from "../api/hooks";
+import { Appear } from "../components/Appear";
 import { Avatar, Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { colors, fonts, spacing } from "../theme";
 
@@ -31,6 +32,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
       <Body muted>{result.question}</Body>
 
       {myDelta ? (
+        <Appear index={1}>
         <Card
           style={{
             borderColor:
@@ -49,6 +51,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
           </Text>
           <Body muted>Il te reste {myDelta.pointsAfter} points.</Body>
         </Card>
+        </Appear>
       ) : null}
 
       {fullBluff ? (
@@ -58,8 +61,9 @@ export function ResultScreen({ round }: { round: RoundView }) {
         </Card>
       ) : null}
 
-      {result.answers.map((answer) => (
-        <Card key={answer.id} style={answer.isTrue ? { borderColor: colors.success } : undefined}>
+      {result.answers.map((answer, i) => (
+        <Appear key={answer.id} index={2 + i}>
+        <Card style={answer.isTrue ? { borderColor: colors.success } : undefined}>
           <View style={s.answerHeader}>
             <Heading>{answer.text}</Heading>
             {answer.isTrue ? <Pill text="Vraie" tone="good" /> : null}
@@ -85,8 +89,10 @@ export function ResultScreen({ round }: { round: RoundView }) {
             <Body muted>Personne n'a mise dessus.</Body>
           )}
         </Card>
+        </Appear>
       ))}
 
+      <Appear index={2 + result.answers.length + 1}>
       <Card>
         <Label>Bilan</Label>
         {result.deltas.map((d) => (
@@ -106,6 +112,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
           </View>
         ))}
       </Card>
+      </Appear>
 
       {/* La relecture du contenu par les joueurs est le seul mecanisme qui
           passe a l'echelle : toutes les cartes sont en statut non verifie. */}
