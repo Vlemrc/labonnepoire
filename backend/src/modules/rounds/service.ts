@@ -1,9 +1,11 @@
 import { Prisma } from "@prisma/client";
+import { FORFEIT_RATIO } from "@poire/shared";
 import { prisma } from "../../lib/prisma.js";
 import { GameRuleError } from "../../game/errors.js";
 import { HttpError } from "../../middleware/error.js";
 import { FULL_BLUFF_PROBABILITY, type RoundMode, type RoundSnapshot } from "../../game/types.js";
 import {
+  allCardsWritten,
   assertCanSubmitAnswers,
   assertCanSubmitBets,
   canResolve,
@@ -47,7 +49,6 @@ function toSnapshot(round: RoundWithRelations): RoundSnapshot {
     status: round.status,
     mode: round.mode,
     bluffeurId: round.bluffeurId,
-    stakeBudget: round.stakeBudget,
     allowNoneOption: round.allowNoneOption,
     deadlineAt: round.deadlineAt,
     participants: round.participants.map((p) => ({
@@ -60,9 +61,10 @@ function toSnapshot(round: RoundWithRelations): RoundSnapshot {
 }
 
 function modifiersFor(round: RoundWithRelations) {
+  const bluffeur = round.session.players.find((p) => p.userId === round.bluffeurId);
   return resolveModifiers(round.twistCode, {
     bettorCount: round.participants.filter((p) => p.role === "BETTOR").length,
-    baseStakeBudget: round.stakeBudget,
+    bluffeurPoints: bluffeur?.points ?? 0,
   });
 }
 
@@ -74,12 +76,14 @@ function modifiersFor(round: RoundWithRelations) {
  * connait la reponse et que celui qui a parie s'en souvient. Une exclusion par
  * partie ferait repiocher dans le paquet complet des la deuxieme soiree.
  */
-async function drawCard(groupId: string, themes: string[]) {
+async function drawCard(groupId: string, themes: string[], alsoExclude: string[] = []) {
   const seen = await prisma.groupSeenCard.findMany({
     where: { groupId },
     select: { cardId: true },
   });
-  const seenIds = seen.map((s) => s.cardId);
+  // `alsoExclude` couvre les cartes deja tirees pour cette meme manche, qui ne
+  // sont pas encore enregistrees en base au moment ou l'on tire les suivantes.
+  const seenIds = [...seen.map((s) => s.cardId), ...alsoExclude];
 
   const playable: Prisma.CardWhereInput = {
     theme: { in: themes },
@@ -107,21 +111,30 @@ async function drawCard(groupId: string, themes: string[]) {
   return card!;
 }
 
-export async function createNextRound(sessionId: string, userId: string) {
-  // Le joueur qui demande le round suivant est justement celui que bloque un
-  // round expire : on le fait tomber avant de refuser pour ROUND_IN_PROGRESS.
+/**
+ * Ouvre une manche : une carte par joueur actif, toutes en ecriture.
+ *
+ * Tout le monde ecrit ses mensonges en meme temps, puis les cartes se jouent
+ * une par une. C'est ce qui rend le jeu tenable en asynchrone : deux temps
+ * d'attente par manche au lieu de deux par joueur.
+ */
+export async function startManche(sessionId: string, userId: string) {
   const { sweepExpiredRounds } = await import("./sweep.js");
   await sweepExpiredRounds({ sessionId });
   const session = await loadSession(sessionId);
+
   if (session.status !== "IN_PROGRESS") {
     throw new GameRuleError("SESSION_NOT_RUNNING", "Cette partie n'est pas en cours.");
   }
   if (!session.players.some((p) => p.userId === userId)) {
     throw new HttpError(403, "NOT_IN_SESSION", "Tu ne joues pas cette partie.");
   }
-  const last = session.rounds[0] ?? null;
-  if (last && (last.status === "WRITING" || last.status === "BETTING")) {
-    throw new GameRuleError("ROUND_IN_PROGRESS", "Le round precedent n'est pas termine.");
+
+  const pending = await prisma.round.count({
+    where: { sessionId, status: { in: ["WRITING", "PENDING", "BETTING"] } },
+  });
+  if (pending > 0) {
+    throw new GameRuleError("MANCHE_IN_PROGRESS", "La manche en cours n'est pas terminee.");
   }
 
   const snapshots = session.players.map((p) => ({
@@ -136,54 +149,73 @@ export async function createNextRound(sessionId: string, userId: string) {
     throw new GameRuleError("SESSION_FINISHED", "La partie est terminee.");
   }
 
-  const bluffeur = nextBluffeur(snapshots, last?.bluffeurId ?? null);
-  const active = session.players.filter((p) => !p.isEliminated);
-  const bettors = active.filter((p) => p.userId !== bluffeur.userId);
-  if (bettors.length === 0) {
-    throw new GameRuleError("NO_BETTOR", "Il n'y a plus de parieur disponible.");
+  const active = session.players
+    .filter((p) => !p.isEliminated)
+    .sort((a, b) => a.turnOrder - b.turnOrder);
+  if (active.length < 2) {
+    throw new GameRuleError("NOT_ENOUGH_PLAYERS", "Il faut au moins deux joueurs actifs.");
   }
 
   const group = session.group;
-  const card = await drawCard(group.id, group.themes);
-  // Mode tire au sort et cache : voir FULL_BLUFF_PROBABILITY.
-  const mode: RoundMode =
-    group.allowNoneOption && Math.random() < FULL_BLUFF_PROBABILITY ? "FULL_BLUFF" : "STANDARD";
+  const manche = (await prisma.round.aggregate({
+    where: { sessionId },
+    _max: { manche: true },
+  }))._max.manche;
+  const nextManche = (manche ?? 0) + 1;
+  const deadline = addHours(new Date(), group.roundDurationHours);
 
-  const round = await prisma.$transaction(async (tx) => {
-    const created = await tx.round.create({
-      data: {
-        sessionId,
-        number: session.currentRoundNumber + 1,
-        cardId: card.id,
-        bluffeurId: bluffeur.userId,
-        mode,
-        status: "WRITING",
-        stakeBudget: group.stakeBudget,
-        allowNoneOption: group.allowNoneOption,
-        deadlineAt: addHours(new Date(), group.roundDurationHours),
-        participants: {
-          create: [
-            { userId: bluffeur.userId, role: "BLUFFEUR", budget: 0 },
-            ...bettors.map((b) => ({ userId: b.userId, role: "BETTOR" as const, budget: 0 })),
-          ],
-        },
-      },
+  // Une carte differente par joueur, tirees d'avance : drawCard exclut les
+  // cartes deja vues par le salon, donc l'appeler en boucle evite les doublons
+  // seulement si chaque tirage est enregistre au fur et a mesure.
+  const rounds: { userId: string; cardId: string; mode: RoundMode; number: number }[] = [];
+  for (const [index, player] of active.entries()) {
+    const card = await drawCard(group.id, group.themes, rounds.map((r) => r.cardId));
+    rounds.push({
+      userId: player.userId,
+      cardId: card.id,
+      mode:
+        group.allowNoneOption && Math.random() < FULL_BLUFF_PROBABILITY
+          ? "FULL_BLUFF"
+          : "STANDARD",
+      number: index + 1,
     });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const r of rounds) {
+      await tx.round.create({
+        data: {
+          sessionId,
+          manche: nextManche,
+          number: r.number,
+          cardId: r.cardId,
+          bluffeurId: r.userId,
+          mode: r.mode,
+          status: "WRITING",
+          allowNoneOption: group.allowNoneOption,
+          deadlineAt: deadline,
+          participants: {
+            create: active.map((p) => ({
+              userId: p.userId,
+              role: p.userId === r.userId ? ("BLUFFEUR" as const) : ("BETTOR" as const),
+              budget: 0,
+            })),
+          },
+        },
+      });
+      await tx.groupSeenCard.upsert({
+        where: { groupId_cardId: { groupId: group.id, cardId: r.cardId } },
+        create: { groupId: group.id, cardId: r.cardId },
+        update: {},
+      });
+    }
     await tx.gameSession.update({
       where: { id: sessionId },
-      data: { currentRoundNumber: created.number },
+      data: { currentRoundNumber: nextManche },
     });
-    // Des que la carte est distribuee elle est brulee pour ce salon, meme si le
-    // round est ensuite annule : le bluffeur a deja vu la reponse.
-    await tx.groupSeenCard.upsert({
-      where: { groupId_cardId: { groupId: group.id, cardId: card.id } },
-      create: { groupId: group.id, cardId: card.id },
-      update: {},
-    });
-    return created;
   });
 
-  return loadRound(round.id);
+  return loadSession(sessionId);
 }
 
 export async function submitAnswers(roundId: string, userId: string, texts: string[]) {
@@ -195,18 +227,10 @@ export async function submitAnswers(roundId: string, userId: string, texts: stri
     fakes.map((text) => ({ text, isTrue: false, origin: "PLAYER" as const, authorId: userId }));
 
   if (round.mode === "STANDARD") {
-    entries.push({
-      text: round.card.trueAnswer,
-      isTrue: true,
-      origin: "CARD",
-      authorId: null,
-    });
+    entries.push({ text: round.card.trueAnswer, isTrue: true, origin: "CARD", authorId: null });
   }
 
   const positions = shufflePositions(entries.length);
-  const modifiers = modifiersFor(round);
-  const budgetFor = (points: number) =>
-    Math.max(0, Math.min(Math.round(round.stakeBudget * modifiers.stakeBudgetMultiplier), points));
 
   await prisma.$transaction(async (tx) => {
     await tx.answer.createMany({
@@ -216,27 +240,59 @@ export async function submitAnswers(roundId: string, userId: string, texts: stri
       where: { roundId_userId: { roundId, userId } },
       data: { hasSubmitted: true },
     });
-    // Le budget est fige ici, plafonne au capital de chaque parieur : personne
-    // ne peut miser plus que ce qu'il possede.
+    // La carte attend son tour : elle ne s'ouvre aux mises que lorsque tous les
+    // joueurs de la manche ont ecrit.
+    await tx.round.update({
+      where: { id: roundId },
+      data: { status: "PENDING", writingEndedAt: new Date() },
+    });
+  });
+
+  await openNextCardIfReady(round.sessionId, round.manche);
+  return loadRound(roundId);
+}
+
+/**
+ * Ouvre la carte suivante aux mises, si c'est le moment.
+ *
+ * Deux conditions : plus personne n'ecrit dans cette manche, et aucune carte
+ * n'est deja en cours. Le budget de chaque parieur est fige ici — c'est la
+ * totalite de son capital a cet instant, et il devra l'engager entierement.
+ */
+export async function openNextCardIfReady(sessionId: string, manche: number) {
+  const rounds = await prisma.round.findMany({
+    where: { sessionId, manche },
+    orderBy: { number: "asc" },
+    select: { id: true, status: true },
+  });
+  if (rounds.length === 0) return;
+  if (!allCardsWritten(rounds.map((r) => r.status))) return;
+  if (rounds.some((r) => r.status === "BETTING")) return;
+
+  const next = rounds.find((r) => r.status === "PENDING");
+  if (!next) return;
+
+  const round = await loadRound(next.id);
+  const group = round.session.group;
+
+  await prisma.$transaction(async (tx) => {
     for (const participant of round.participants) {
       if (participant.role !== "BETTOR") continue;
       const player = round.session.players.find((p) => p.userId === participant.userId);
       await tx.roundParticipant.update({
         where: { id: participant.id },
-        data: { budget: budgetFor(player?.points ?? 0) },
+        // Le capital entier : on avance de carte en carte avec ce qu'il reste.
+        data: { budget: Math.max(0, player?.points ?? 0) },
       });
     }
     await tx.round.update({
-      where: { id: roundId },
+      where: { id: next.id },
       data: {
         status: "BETTING",
-        writingEndedAt: new Date(),
-        deadlineAt: addHours(new Date(), round.session.group.roundDurationHours),
+        deadlineAt: addHours(new Date(), group.roundDurationHours),
       },
     });
   });
-
-  return loadRound(roundId);
 }
 
 export async function submitBets(roundId: string, userId: string, lines: BetLine[]) {
@@ -332,7 +388,14 @@ export async function resolveRoundAndScore(roundId: string) {
   for (const p of round.participants) {
     if (p.role !== "BETTOR") continue;
     budgets[p.userId] = p.budget;
-    if (!p.hasSubmitted && p.budget > 0) forfeits.push({ bettorId: p.userId, amount: p.budget });
+    if (!p.hasSubmitted && p.budget > 0) {
+      // Pas tout son capital : il mise normalement l'integralite de ce qu'il a,
+      // le lui prendre en entier l'eliminerait pour une notification ratee.
+      forfeits.push({
+        bettorId: p.userId,
+        amount: Math.max(1, Math.round(p.budget * FORFEIT_RATIO)),
+      });
+    }
   }
 
   const outcome = computeRound({
@@ -383,6 +446,12 @@ export async function resolveRoundAndScore(roundId: string) {
       });
     }
   });
+
+  // La carte suivante de la manche s'ouvre dans la foulee. Quand il n'en reste
+  // aucune, la manche est close et il faudra en relancer une.
+  if (!sessionOutcome.isFinished) {
+    await openNextCardIfReady(round.sessionId, round.manche);
+  }
 
   return loadRound(roundId);
 }

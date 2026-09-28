@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { DEFAULT_STAKE_BUDGET, DEFAULT_STARTING_POINTS } from "@poire/shared";
+import { DEFAULT_STARTING_POINTS } from "@poire/shared";
 import { useCreateGroup, useThemes } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth/AuthContext";
 import { usePendingSalon } from "../../src/onboarding/PendingSalon";
@@ -26,7 +26,6 @@ export default function NewSalon() {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [startingPoints, setStartingPoints] = useState(String(DEFAULT_STARTING_POINTS));
-  const [stakeBudget, setStakeBudget] = useState(String(DEFAULT_STAKE_BUDGET));
 
   if (isPending) return <Loading />;
   if (error) return <ErrorView error={error} onRetry={() => void refetch()} />;
@@ -41,7 +40,6 @@ export default function NewSalon() {
       name: name.trim(),
       themes: selected,
       startingPoints: Number(startingPoints) || DEFAULT_STARTING_POINTS,
-      stakeBudget: Number(stakeBudget) || DEFAULT_STAKE_BUDGET,
     };
 
     // Pas encore de compte : on retient le choix et on demande le profil. Le
@@ -107,24 +105,17 @@ export default function NewSalon() {
         </Body>
       </View>
 
-      <View style={s.row}>
-        <View style={{ flex: 1 }}>
-          <Field
-            label="Capital de depart"
-            value={startingPoints}
-            onChangeText={setStartingPoints}
-            keyboardType="number-pad"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Field
-            label="Jetons par round"
-            value={stakeBudget}
-            onChangeText={setStakeBudget}
-            keyboardType="number-pad"
-          />
-        </View>
-      </View>
+      <Field
+        label="Capital de depart"
+        value={startingPoints}
+        onChangeText={setStartingPoints}
+        keyboardType="number-pad"
+      />
+      {/* Il n'y a plus de budget par carte : on mise tout ce qu'il reste. */}
+      <Body muted>
+        Chacun demarre avec ce capital et l'engage entierement a chaque carte.
+        Ce qu'on recupere, on le rejoue sur la suivante.
+      </Body>
     </Screen>
   );
 }

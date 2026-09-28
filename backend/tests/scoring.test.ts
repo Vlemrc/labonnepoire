@@ -195,21 +195,23 @@ describe("resolveRound — option « aucune de ces reponses »", () => {
 });
 
 describe("resolveRound — twists", () => {
-  it("DOUBLE_STAKES ne touche pas la resolution, seulement le budget", () => {
-    const mods = resolveModifiers("DOUBLE_STAKES", { bettorCount: 1, baseStakeBudget: 10 });
-    expect(mods.stakeBudgetMultiplier).toBe(2);
-    expect(mods.transferMultiplier).toBe(1);
+  it("DOUBLE_STAKES double ce qui change de main", () => {
+    const mods = resolveModifiers("DOUBLE_STAKES", { bettorCount: 1, bluffeurPoints: 20 });
+    expect(mods.transferMultiplier).toBe(2);
+    const out = resolveRound(baseInput({ modifiers: mods, bets: [bet(ALICE, "a-fake1", 10)] }));
+    expect(out.deltas[ALICE]).toBe(-20);
+    expect(out.deltas[BLUFFEUR]).toBe(20);
   });
 
   it("BLUFFEUR_ANTE paie le parieur qui a tout mise sur la vraie reponse", () => {
-    const mods = resolveModifiers("BLUFFEUR_ANTE", { bettorCount: 1, baseStakeBudget: 10 });
+    const mods = resolveModifiers("BLUFFEUR_ANTE", { bettorCount: 1, bluffeurPoints: 20 });
     const out = resolveRound(baseInput({ modifiers: mods, bets: [bet(ALICE, "a-true", 10)] }));
     expect(out.deltas[ALICE]).toBe(5);
     expect(out.deltas[BLUFFEUR]).toBe(-5);
   });
 
   it("BLUFFEUR_ANTE ne paie pas une mise repartie, meme majoritairement bonne", () => {
-    const mods = resolveModifiers("BLUFFEUR_ANTE", { bettorCount: 1, baseStakeBudget: 10 });
+    const mods = resolveModifiers("BLUFFEUR_ANTE", { bettorCount: 1, bluffeurPoints: 20 });
     const out = resolveRound(
       baseInput({ modifiers: mods, bets: [bet(ALICE, "a-true", 9), bet(ALICE, "a-fake1", 1)] }),
     );
@@ -218,7 +220,7 @@ describe("resolveRound — twists", () => {
   });
 
   it("un code de twist inconnu retombe sur des modificateurs neutres", () => {
-    expect(resolveModifiers("N_IMPORTE_QUOI", { bettorCount: 1, baseStakeBudget: 10 })).toEqual(
+    expect(resolveModifiers("N_IMPORTE_QUOI", { bettorCount: 1, bluffeurPoints: 20 })).toEqual(
       NEUTRAL_MODIFIERS,
     );
   });
@@ -329,6 +331,44 @@ describe("resolveAbandonedRound — bluffeur qui ne repond pas", () => {
 
   it("reste a somme nulle", () => {
     const out = abandon({ penalty: 7, bettorIds: [ALICE] });
+    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
+  });
+});
+
+describe("resolveRound — jamais de capital negatif", () => {
+  it("plafonne la perte au capital reel quand les transferts sont doubles", () => {
+    const out = resolveRound(
+      baseInput({
+        players: [
+          { userId: BLUFFEUR, points: 20 },
+          { userId: ALICE, points: 40 },
+        ],
+        budgets: { [ALICE]: 40 },
+        bets: [bet(ALICE, "a-fake1", 40)],
+        modifiers: { ...NEUTRAL_MODIFIERS, transferMultiplier: 2 },
+      }),
+    );
+    // 40 x 2 = 80 reclames, mais Alice n'a que 40.
+    expect(out.deltas[ALICE]).toBe(-40);
+    expect(out.deltas[BLUFFEUR]).toBe(40);
+    expect(out.pointsAfter[ALICE]).toBe(0);
+    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
+  });
+
+  it("repartit correctement plusieurs mises doublees sur un capital limite", () => {
+    const out = resolveRound(
+      baseInput({
+        players: [
+          { userId: BLUFFEUR, points: 20 },
+          { userId: ALICE, points: 10 },
+        ],
+        budgets: { [ALICE]: 10 },
+        bets: [bet(ALICE, "a-fake1", 6), bet(ALICE, "a-fake2", 4)],
+        modifiers: { ...NEUTRAL_MODIFIERS, transferMultiplier: 2 },
+      }),
+    );
+    expect(out.pointsAfter[ALICE]).toBe(0);
+    expect(out.deltas[BLUFFEUR]).toBe(10);
     expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
   });
 });

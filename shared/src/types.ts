@@ -4,7 +4,7 @@
 import type { AvatarId } from "./constants.js";
 
 export type SessionStatus = "LOBBY" | "IN_PROGRESS" | "FINISHED";
-export type RoundStatus = "WRITING" | "BETTING" | "RESOLVED" | "CANCELLED";
+export type RoundStatus = "WRITING" | "PENDING" | "BETTING" | "RESOLVED" | "CANCELLED";
 export type RoundMode = "STANDARD" | "FULL_BLUFF";
 export type RoundRole = "BLUFFEUR" | "BETTOR";
 export type AnswerOrigin = "CARD" | "PLAYER";
@@ -17,7 +17,6 @@ export interface PublicUser {
 
 export interface GroupSettings {
   startingPoints: number;
-  stakeBudget: number;
   themes: string[];
   allowNoneOption: boolean;
   twistsEnabled: boolean;
@@ -48,6 +47,11 @@ export interface SessionView {
   groupId: string;
   status: SessionStatus;
   currentRoundNumber: number;
+  /** Manche en cours : une carte par joueur, ecrites en parallele. */
+  manche: number;
+  /** Cartes de la manche encore a jouer, celle en cours comprise. */
+  cardsLeft: number;
+  cardsTotal: number;
   winnerId: string | null;
   players: SessionPlayerView[];
   currentRound: RoundView | null;
@@ -78,12 +82,14 @@ export interface RoundParticipantView {
 export interface RoundView {
   id: string;
   sessionId: string;
+  manche: number;
   number: number;
   /** Revele uniquement a la resolution : sert au signalement de carte. */
   cardId: string | null;
   status: RoundStatus;
   mode: RoundMode;
-  stakeBudget: number;
+  /** Jetons que CE joueur doit repartir : la totalite de son capital. */
+  myBudget: number;
   allowNoneOption: boolean;
   deadlineAt: string | null;
   bluffeur: PublicUser;

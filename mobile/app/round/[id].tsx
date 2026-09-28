@@ -45,14 +45,32 @@ export default function Round() {
 
   if (r.status === "RESOLVED") return <ResultScreen round={r} />;
 
+  if (r.status === "PENDING") {
+    return (
+      <Waiting
+        round={r}
+        title="Carte en attente"
+        subtitle="Les cartes se jouent une par une. Celle-ci passera a son tour."
+      />
+    );
+  }
+
   if (r.status === "WRITING") {
     if (r.myRole === "BLUFFEUR" && !me?.hasSubmitted) return <BluffScreen round={r} />;
-    return <Waiting round={r} title="En attente du bluffeur" subtitle={`${r.bluffeur.pseudo} prepare ses mensonges.`} />;
+    // Tout le monde ecrit en meme temps : si l'on est ici, c'est qu'on a fini
+    // et qu'il reste des joueurs a la traine.
+    return (
+      <Waiting
+        round={r}
+        title="En attente des autres"
+        subtitle="Tes mensonges sont prets. La manche demarre quand tout le monde aura ecrit."
+      />
+    );
   }
 
   // BETTING
   if (r.myRole === "BETTOR" && !me?.hasSubmitted) {
-    return <BetScreen round={r} budget={me?.budget ?? r.stakeBudget} />;
+    return <BetScreen round={r} budget={r.myBudget} />;
   }
   return (
     <Waiting

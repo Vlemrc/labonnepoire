@@ -5,7 +5,7 @@ import type { PublicUser, RoundView, SessionView } from "@poire/shared";
 import { Appear } from "../../src/components/Appear";
 import { useAuth } from "../../src/auth/AuthContext";
 import { shareInviteCode } from "../../src/lib/share";
-import { useGroup, useSession, useStartRound, useStartSession } from "../../src/api/hooks";
+import { useGroup, useSession, useStartManche, useStartSession } from "../../src/api/hooks";
 import {
   Avatar,
   Body,
@@ -28,7 +28,7 @@ export default function Salon() {
   const group = useGroup(id);
   const session = useSession(group.data?.activeSessionId ?? undefined);
   const startSession = useStartSession();
-  const startRound = useStartRound();
+  const startManche = useStartManche();
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   if (group.isPending) return <Loading />;
@@ -71,7 +71,7 @@ export default function Salon() {
 
       {round ? (
         <Appear index={1}>
-          <RoundCard round={round} />
+          <RoundCard round={round} cardsTotal={s?.cardsTotal ?? 0} />
         </Appear>
       ) : null}
     </Screen>
@@ -113,21 +113,24 @@ export default function Salon() {
     }
 
     if (roundOpen && round) {
-      return <Button label="Ouvrir le round" onPress={() => router.push(`/round/${round.id}`)} />;
+      const label =
+        round.status === "WRITING"
+          ? "Ecrire mes mensonges"
+          : round.status === "BETTING"
+            ? "Miser"
+            : "Ouvrir la carte";
+      return <Button label={label} onPress={() => router.push(`/round/${round.id}`)} />;
     }
 
     return (
       <>
-        {startRound.error ? (
-          <Text style={st.error}>{(startRound.error as Error).message}</Text>
+        {startManche.error ? (
+          <Text style={st.error}>{(startManche.error as Error).message}</Text>
         ) : null}
         <Button
-          label={round ? "Round suivant" : "Demarrer le premier round"}
-          onPress={async () => {
-            const res = await startRound.mutateAsync(s.id);
-            router.push(`/round/${res.round.id}`);
-          }}
-          loading={startRound.isPending}
+          label={s.manche > 0 ? "Manche suivante" : "Lancer la premiere manche"}
+          onPress={() => void startManche.mutateAsync(s.id)}
+          loading={startManche.isPending}
         />
       </>
     );
@@ -154,7 +157,7 @@ function Scoreboard({ session, meId }: { session: SessionView; meId?: string }) 
     <Card>
       <View style={st.header}>
         <Heading>Classement</Heading>
-        <Label>Round {session.currentRoundNumber}</Label>
+        <Label>Manche {session.manche}</Label>
       </View>
       {ranked.map((p) => (
         <View key={p.userId} style={[st.playerRow, p.isEliminated && st.eliminated]}>
@@ -171,20 +174,23 @@ function Scoreboard({ session, meId }: { session: SessionView; meId?: string }) 
   );
 }
 
-function RoundCard({ round }: { round: RoundView }) {
+function RoundCard({ round, cardsTotal }: { round: RoundView; cardsTotal: number }) {
   const waiting = round.participants.filter((p) => !p.hasSubmitted);
   // CANCELLED a longtemps ete traite comme un « autre » cas et affichait
   // « Mises » : chaque statut est desormais nomme explicitement.
   const LABELS: Record<RoundView["status"], string> = {
     WRITING: "Ecriture",
+    PENDING: "En attente",
     BETTING: "Mises",
     RESOLVED: "Termine",
     CANCELLED: "Annule",
   };
   const status =
     round.status === "WRITING"
-      ? `${round.bluffeur.pseudo} prepare ses fausses reponses`
-      : round.status === "BETTING"
+      ? "Tout le monde ecrit ses mensonges"
+      : round.status === "PENDING"
+        ? "Cette carte attend son tour"
+        : round.status === "BETTING"
         ? waiting.length === 1
           ? "1 joueur n'a pas encore mise"
           : `${waiting.length} joueurs n'ont pas encore mise`
@@ -195,7 +201,9 @@ function RoundCard({ round }: { round: RoundView }) {
   return (
     <Card>
       <View style={st.header}>
-        <Heading>Round {round.number}</Heading>
+        <Heading>
+          Carte {round.number} / {cardsTotal}
+        </Heading>
         <Pill
           text={LABELS[round.status]}
           tone={

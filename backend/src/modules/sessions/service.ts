@@ -8,8 +8,10 @@ export const sessionInclude = {
   players: { include: { user: true }, orderBy: { turnOrder: "asc" } },
   group: true,
   rounds: {
-    orderBy: { number: "desc" },
-    take: 1,
+    // Toute la manche en cours : pendant l'ecriture chaque joueur a sa propre
+    // carte, il faut donc les charger toutes et choisir selon le demandeur.
+    orderBy: [{ manche: "desc" }, { number: "asc" }],
+    take: 16,
     include: {
       card: true,
       bluffeur: true,

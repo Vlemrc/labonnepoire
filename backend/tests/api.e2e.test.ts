@@ -33,142 +33,258 @@ function splitRoles(players: TestPlayer[], bluffeurId: string) {
 beforeEach(resetDatabase);
 afterAll(() => prisma.$disconnect());
 
-describe("boucle de jeu complete", () => {
-  it("joue un round de bout en bout et met les scores a jour", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const roundRes = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const { bluffeur, bettors } = splitRoles(players, roundRes.body.round.bluffeur.id);
-    const roundId = roundRes.body.round.id;
+/** Chaque joueur ecrit les mensonges de SA carte. */
+async function writeAll(players: TestPlayer[], sessionId: string) {
+  for (const player of players) {
+    const view = await as(player).get(`/sessions/${sessionId}`).expect(200);
+    const round = view.body.session.currentRound;
+    if (!round || round.status !== "WRITING") continue;
+    const fakes = round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
+    await as(player).post(`/rounds/${round.id}/answers`).send({ answers: fakes }).expect(201);
+  }
+}
 
-    // Le bluffeur voit la carte, avec la vraie reponse.
-    const bluffeurView = await as(bluffeur).get(`/rounds/${roundId}`).expect(200);
-    expect(bluffeurView.body.round.card).not.toBeNull();
-    expect(bluffeurView.body.round.card.trueAnswer).toBeTruthy();
-    expect(bluffeurView.body.round.myRole).toBe("BLUFFEUR");
+/**
+ * Le joueur mise tout son capital sur une carte precise.
+ *
+ * On vise un roundId plutot que « la carte en cours » : des que le dernier
+ * parieur a joue, la carte suivante s'ouvre, et un helper qui suivrait l'etat
+ * courant ferait miser les joueurs restants sur la mauvaise carte.
+ */
+async function betAll(
+  player: TestPlayer,
+  roundId: string,
+  pick: "first" | "spread" = "first",
+) {
+  const view = await as(player).get(`/rounds/${roundId}`).expect(200);
+  const round = view.body.round;
+  if (!round || round.status !== "BETTING" || round.myRole !== "BETTOR") return null;
+  const budget = round.myBudget as number;
+  const ids = (round.answers as { id: string }[]).map((a) => a.id);
+  const bets =
+    pick === "first" || budget < 3
+      ? [{ answerId: ids[0], amount: budget }]
+      : [
+          { answerId: ids[0], amount: budget - 2 },
+          { answerId: ids[1], amount: 1 },
+          { answerId: ids[2], amount: 1 },
+        ];
+  await as(player).post(`/rounds/${roundId}/bets`).send({ bets }).expect(201);
+  return roundId;
+}
 
-    const isFullBluff = bluffeurView.body.round.mode === "FULL_BLUFF";
-    const fakes = isFullBluff ? ["Faux A", "Faux B", "Faux C"] : ["Faux A", "Faux B"];
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+/**
+ * Mise tout sur la vraie reponse : le capital ne bouge pas.
+ * Indispensable des qu'un test doit traverser plusieurs cartes — miser a
+ * l'aveugle finit par eliminer quelqu'un et termine la partie en cours de route.
+ */
+async function betOnTruth(player: TestPlayer, roundId: string) {
+  const view = await as(player).get(`/rounds/${roundId}`).expect(200);
+  const round = view.body.round;
+  if (!round || round.status !== "BETTING" || round.myRole !== "BETTOR") return;
+  const card = await prisma.card.findFirstOrThrow({ where: { rounds: { some: { id: roundId } } } });
+  const good = (round.answers as { id: string; text: string }[]).find(
+    (a) => a.text === card.trueAnswer,
+  );
+  const target = good ?? round.answers[0];
+  await as(player)
+    .post(`/rounds/${roundId}/bets`)
+    .send({ bets: [{ answerId: target.id, amount: round.myBudget }] })
+    .expect(201);
+}
 
-    // Le parieur voit 3 reponses melangees, sans savoir laquelle est vraie.
-    const bettor = bettors[0]!;
-    const betView = await as(bettor).get(`/rounds/${roundId}`).expect(200);
-    expect(betView.body.round.status).toBe("BETTING");
-    expect(betView.body.round.answers).toHaveLength(3);
-    expect(betView.body.round.answers[0]).not.toHaveProperty("isTrue");
-    expect(betView.body.round.card).toBeNull();
+describe("boucle de jeu : une manche, une carte par joueur", () => {
+  it("distribue une carte a chacun et attend que tous aient ecrit", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
 
-    const answers = betView.body.round.answers as { id: string; text: string }[];
-    const budget = betView.body.round.stakeBudget;
-    await as(bettor)
-      .post(`/rounds/${roundId}/bets`)
-      .send({
-        bets: [
-          { answerId: answers[0]!.id, amount: budget - 3 },
-          { answerId: answers[1]!.id, amount: 2 },
-          { answerId: answers[2]!.id, amount: 1 },
-        ],
-      })
-      .expect(201);
+    // Chaque joueur voit SA carte, avec la vraie reponse.
+    const seen = new Set<string>();
+    for (const player of players) {
+      const view = await as(player).get(`/sessions/${session.id}`).expect(200);
+      const round = view.body.session.currentRound;
+      expect(round.status).toBe("WRITING");
+      expect(round.myRole).toBe("BLUFFEUR");
+      expect(round.card.trueAnswer).toBeTruthy();
+      seen.add(round.id);
+    }
+    expect(seen.size).toBe(3); // trois cartes differentes
 
-    // Un seul parieur : le round se resout automatiquement.
-    const resolved = await as(bettor).get(`/rounds/${roundId}`).expect(200);
-    expect(resolved.body.round.status).toBe("RESOLVED");
-    expect(resolved.body.round.result.answers.filter((a: any) => a.isTrue)).toHaveLength(
-      isFullBluff ? 0 : 1,
-    );
+    // Tant qu'il en manque un, rien ne s'ouvre aux mises.
+    await writeAll([players[0]!, players[1]!], session.id);
+    const partial = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(partial.body.session.currentRound.status).not.toBe("BETTING");
 
-    const deltas = resolved.body.round.result.deltas as { delta: number }[];
-    expect(deltas.reduce((s, d) => s + d.delta, 0)).toBe(0);
-
-    const after = await as(bettor).get(`/sessions/${session.id}`).expect(200);
-    const total = after.body.session.players.reduce((s: number, p: any) => s + p.points, 0);
-    expect(total).toBe(40); // 2 joueurs x 20 points : le jeu est a somme nulle
+    await writeAll([players[2]!], session.id);
+    const ready = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(ready.body.session.currentRound.status).toBe("BETTING");
+    expect(ready.body.session.cardsTotal).toBe(3);
   });
 
-  it("enchaine les rounds en alternant le bluffeur", async () => {
-    // Capital large : ce test verifie la rotation, pas l'elimination. Avec le
-    // capital par defaut, un parieur qui mise tout a l'aveugle tombe a zero
-    // avant le troisieme round et sort de la rotation.
+  it("enchaine les cartes une par une, avec un point de score entre chaque", async () => {
+    // allowNoneOption desactive : sinon une carte peut tomber en mode « tout
+    // est faux », ou miser sur la vraie reponse est impossible, ce qui elimine
+    // un joueur et termine la partie au milieu du test.
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
-      startingPoints: 100,
+      startingPoints: 60,
+      allowNoneOption: false,
     });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
 
-    const seenBluffeurs: string[] = [];
-    for (let i = 0; i < 3; i++) {
-      const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-      const roundId = res.body.round.id;
-      const bluffeur = players.find((p) => p.id === res.body.round.bluffeur.id)!;
-      // Les parieurs sont ceux que le serveur a designes : un joueur elimine
-      // en cours de partie ne participe plus au round.
-      const bettorIds: string[] = res.body.round.participants
-        .filter((p: any) => p.role === "BETTOR")
-        .map((p: any) => p.user.id);
-      const bettors = players.filter((p) => bettorIds.includes(p.id));
-      seenBluffeurs.push(bluffeur.id);
+    const played: string[] = [];
+    for (let card = 0; card < 3; card++) {
+      const before = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+      const round = before.body.session.currentRound;
+      expect(round.status).toBe("BETTING");
+      played.push(round.bluffeur.id);
 
-      const view = await as(bluffeur).get(`/rounds/${roundId}`);
-      const fakes =
-        view.body.round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
-      await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+      for (const player of players) await betOnTruth(player, round.id);
 
-      for (const bettor of bettors) {
-        const bv = await as(bettor).get(`/rounds/${roundId}`);
-        const budget = bv.body.round.participants.find((p: any) => p.user.id === bettor.id).budget;
-        const first = bv.body.round.answers[0].id;
-        await as(bettor)
-          .post(`/rounds/${roundId}/bets`)
-          .send({ bets: [{ answerId: first, amount: budget }] })
-          .expect(201);
-      }
+      const after = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+      expect(after.body.session.cardsLeft).toBe(2 - card);
     }
-    expect(new Set(seenBluffeurs).size).toBe(3);
+    // Chaque joueur a vu sa carte jouee, une fois.
+    expect(new Set(played).size).toBe(3);
+  });
+
+  it("fait miser au parieur la totalite de son capital, qui evolue de carte en carte", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      startingPoints: 20,
+      allowNoneOption: false,
+    });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
+
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const round = view.body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    const bettorView = await as(bettor).get(`/sessions/${session.id}`).expect(200);
+    expect(bettorView.body.session.currentRound.myBudget).toBe(20);
+
+    // Moitie sur la vraie, moitie a cote : il lui reste la moitie.
+    const answers = bettorView.body.session.currentRound.answers as { id: string; text: string }[];
+    const bluffeurView = await as(players.find((p) => p.id === round.bluffeur.id)!)
+      .get(`/rounds/${round.id}`)
+      .expect(200);
+    const trueText = bluffeurView.body.round.result?.answers
+      ? null
+      : (await prisma.card.findFirstOrThrow({ where: { rounds: { some: { id: round.id } } } }))
+          .trueAnswer;
+    const good = answers.find((a) => a.text === trueText)!;
+    const bad = answers.find((a) => a.text !== trueText)!;
+    await as(bettor)
+      .post(`/rounds/${round.id}/bets`)
+      .send({ bets: [{ answerId: good.id, amount: 10 }, { answerId: bad.id, amount: 10 }] })
+      .expect(201);
+
+    const after = await as(bettor).get(`/sessions/${session.id}`).expect(200);
+    const me = after.body.session.players.find((p: any) => p.userId === bettor.id);
+    expect(me.points).toBe(10);
+  });
+
+  it("refuse une mise qui n'engage pas tout le capital", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], { startingPoints: 20 });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
+
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const round = view.body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    const bettorRound = (await as(bettor).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const res = await as(bettor)
+      .post(`/rounds/${round.id}/bets`)
+      .send({ bets: [{ answerId: bettorRound.answers[0].id, amount: 5 }] })
+      .expect(400);
+    expect(res.body.error.code).toBe("BUDGET_MISMATCH");
+  });
+
+  it("relance une manche une fois toutes les cartes jouees", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      startingPoints: 80,
+      allowNoneOption: false,
+    });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
+    for (let i = 0; i < 2; i++) {
+      const current = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session
+        .currentRound;
+      for (const p of players) await betOnTruth(p, current.id);
+    }
+
+    const done = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(done.body.session.cardsLeft).toBe(0);
+    expect(done.body.session.manche).toBe(1);
+
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const next = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(next.body.session.manche).toBe(2);
+    expect(next.body.session.currentRound.status).toBe("WRITING");
+  });
+
+  it("refuse d'ouvrir une manche tant que la precedente n'est pas finie", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const res = await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(409);
+    expect(res.body.error.code).toBe("MANCHE_IN_PROGRESS");
   });
 });
 
 describe("etancheite de l'API", () => {
   it("ne revele jamais la vraie reponse a un parieur avant la resolution", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
 
-    const view = await as(bluffeur).get(`/rounds/${roundId}`);
-    const trueAnswer = view.body.round.card.trueAnswer;
-    const fakes = view.body.round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const round = view.body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
 
-    const bettorView = await as(bettors[0]!).get(`/rounds/${roundId}`).expect(200);
-    const payload = JSON.stringify(bettorView.body);
+    const seen = await as(bettor).get(`/rounds/${round.id}`).expect(200);
+    const payload = JSON.stringify(seen.body);
     expect(payload).not.toContain('"isTrue"');
     expect(payload).not.toContain('"authorId"');
-    expect(bettorView.body.round.card).toBeNull();
-    expect(bettorView.body.round.result).toBeNull();
-    // Le mode est masque : sinon FULL_BLUFF trahirait que « aucune » est gagnant.
-    expect(bettorView.body.round.mode).toBe("STANDARD");
-    if (fakes.length === 2) expect(payload).toContain(trueAnswer);
-
-    // Les mises des autres restent invisibles tant que le round n'est pas resolu.
-    const answers = bettorView.body.round.answers;
-    const budget = bettorView.body.round.participants.find(
-      (p: any) => p.user.id === bettors[0]!.id,
-    ).budget;
-    await as(bettors[0]!)
-      .post(`/rounds/${roundId}/bets`)
-      .send({ bets: [{ answerId: answers[0].id, amount: budget }] })
-      .expect(201);
-
-    const otherView = await as(bettors[1]!).get(`/rounds/${roundId}`).expect(200);
-    expect(otherView.body.round.status).toBe("BETTING");
-    expect(otherView.body.round.myBets).toBeNull();
-    expect(JSON.stringify(otherView.body)).not.toContain('"bettor"');
+    expect(seen.body.round.card).toBeNull();
+    expect(seen.body.round.result).toBeNull();
+    // Le mode reste masque : savoir qu'on est en FULL_BLUFF rendrait l'option
+    // « aucune de ces reponses » gratuite.
+    expect(seen.body.round.mode).toBe("STANDARD");
   });
 
-  it("refuse l'acces a un joueur exterieur au round", async () => {
+  it("ne montre pas la carte d'un joueur a un autre pendant l'ecriture", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const theirs = (await as(players[1]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    expect(mine.id).not.toBe(theirs.id);
+
+    // La carte de l'autre ne doit rien reveler.
+    const peek = await as(players[0]!).get(`/rounds/${theirs.id}`).expect(200);
+    expect(peek.body.round.card).toBeNull();
+    expect(peek.body.round.myRole).toBe("BETTOR");
+  });
+
+  it("garde les mises secretes jusqu'a la resolution", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
+
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const bettors = players.filter((p) => p.id !== round.bluffeur.id);
+    await betAll(bettors[0]!, round.id);
+
+    const other = await as(bettors[1]!).get(`/rounds/${round.id}`).expect(200);
+    expect(other.body.round.status).toBe("BETTING");
+    expect(JSON.stringify(other.body)).not.toContain('"bettor"');
+  });
+
+  it("refuse l'acces a un joueur exterieur a la partie", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
     const intrus = await signUp("Intrus");
-    await as(intrus).get(`/rounds/${res.body.round.id}`).expect(403);
+    await as(intrus).get(`/rounds/${round.id}`).expect(403);
     await as(intrus).get(`/sessions/${session.id}`).expect(403);
   });
 
@@ -179,135 +295,124 @@ describe("etancheite de l'API", () => {
 });
 
 describe("garde-fous de la boucle", () => {
-  it("empeche un parieur d'ecrire les fausses reponses", async () => {
+  it("empeche d'ecrire les mensonges de la carte d'un autre", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const { bettors } = splitRoles(players, res.body.round.bluffeur.id);
-    const r = await as(bettors[0]!)
-      .post(`/rounds/${res.body.round.id}/answers`)
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const theirs = (await as(players[1]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+
+    const res = await as(players[0]!)
+      .post(`/rounds/${theirs.id}/answers`)
       .send({ answers: ["A", "B"] })
       .expect(403);
-    expect(r.body.error.code).toBe("NOT_BLUFFEUR");
+    expect(res.body.error.code).toBe("NOT_BLUFFEUR");
   });
 
-  it("refuse une repartition de mises qui ne fait pas le budget", async () => {
+  it("empeche le proprietaire de la carte de miser dessus", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
-    const view = await as(bluffeur).get(`/rounds/${roundId}`);
-    const fakes = view.body.round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
 
-    const bv = await as(bettors[0]!).get(`/rounds/${roundId}`);
-    const r = await as(bettors[0]!)
-      .post(`/rounds/${roundId}/bets`)
-      .send({ bets: [{ answerId: bv.body.round.answers[0].id, amount: 3 }] })
-      .expect(400);
-    expect(r.body.error.code).toBe("BUDGET_MISMATCH");
-  });
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const owner = players.find((p) => p.id === round.bluffeur.id)!;
+    const ownerView = await as(owner).get(`/rounds/${round.id}`).expect(200);
+    expect(ownerView.body.round.myRole).toBe("BLUFFEUR");
 
-  it("refuse de lancer un round tant que le precedent n'est pas resolu", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"]);
-    await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const r = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(409);
-    expect(r.body.error.code).toBe("ROUND_IN_PROGRESS");
+    const res = await as(owner)
+      .post(`/rounds/${round.id}/bets`)
+      .send({ bets: [{ answerId: ownerView.body.round.answers[0].id, amount: 20 }] })
+      .expect(403);
+    expect(res.body.error.code).toBe("NOT_BETTOR");
   });
 
   it("n'autorise qu'une seule carte twist par joueur et par partie", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+
     const twisted = await as(players[0]!)
-      .post(`/rounds/${roundId}/twist`)
+      .post(`/rounds/${mine.id}/twist`)
       .send({ code: "DOUBLE_STAKES" })
       .expect(200);
     expect(twisted.body.round.twist.code).toBe("DOUBLE_STAKES");
 
-    const again = await as(players[0]!).post(`/rounds/${roundId}/twist`).expect(409);
+    const again = await as(players[0]!).post(`/rounds/${mine.id}/twist`).expect(409);
     expect(again.body.error.code).toBe("TWIST_ALREADY_ACTIVE");
   });
 
-  it("DOUBLE_STAKES double effectivement le budget distribue", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"], { stakeBudget: 5 });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
+  it("DOUBLE_STAKES double ce qui change de main", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      startingPoints: 40,
+      allowNoneOption: false,
+    });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
 
-    await as(bettors[0]!).post(`/rounds/${roundId}/twist`).send({ code: "DOUBLE_STAKES" }).expect(200);
-    const view = await as(bluffeur).get(`/rounds/${roundId}`);
-    const fakes = view.body.round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+    // Le twist est pose sur la premiere carte de la manche.
+    const first = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    await as(players[0]!).post(`/rounds/${first.id}/twist`).send({ code: "DOUBLE_STAKES" }).expect(200);
+    await writeAll(players, session.id);
 
-    const bv = await as(bettors[0]!).get(`/rounds/${roundId}`);
-    const me = bv.body.round.participants.find((p: any) => p.user.id === bettors[0]!.id);
-    expect(me.budget).toBe(10);
-  });
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    const card = await prisma.card.findFirstOrThrow({
+      where: { rounds: { some: { id: round.id } } },
+    });
+    const view = (await as(bettor).get(`/rounds/${round.id}`)).body.round;
+    const wrong = view.answers.find((a: any) => a.text !== card.trueAnswer)!;
 
-  it("plafonne le budget de mise au capital restant du parieur", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"], { startingPoints: 6, stakeBudget: 10 });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
-    const view = await as(bluffeur).get(`/rounds/${roundId}`);
-    const fakes = view.body.round.mode === "FULL_BLUFF" ? ["A", "B", "C"] : ["A", "B"];
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: fakes }).expect(201);
+    await as(bettor)
+      .post(`/rounds/${round.id}/bets`)
+      .send({ bets: [{ answerId: wrong.id, amount: view.myBudget }] })
+      .expect(201);
 
-    const bv = await as(bettors[0]!).get(`/rounds/${roundId}`);
-    const me = bv.body.round.participants.find((p: any) => p.user.id === bettors[0]!.id);
-    expect(me.budget).toBe(6);
+    // 40 mises a cote, doubles : le parieur tombe a zero au lieu de perdre 40.
+    const after = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    const loser = after.body.session.players.find((p: any) => p.userId === bettor.id);
+    expect(loser.points).toBe(0);
+    expect(loser.isEliminated).toBe(true);
   });
 });
 
 describe("cas limites", () => {
-  it("termine la partie et designe un vainqueur quand un joueur tombe a zero", async () => {
+  it("termine la partie quand un joueur tombe a zero", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"], {
-      startingPoints: 10,
-      stakeBudget: 10,
-      allowNoneOption: false, // garantit un round STANDARD : la vraie reponse est presente
+      startingPoints: 20,
+      allowNoneOption: false,
     });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
 
-    const view = await as(bluffeur).get(`/rounds/${roundId}`);
-    expect(view.body.round.mode).toBe("STANDARD");
-    const trueAnswer = view.body.round.card.trueAnswer;
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: ["A", "B"] }).expect(201);
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    const card = await prisma.card.findFirstOrThrow({
+      where: { rounds: { some: { id: round.id } } },
+    });
+    const view = (await as(bettor).get(`/rounds/${round.id}`)).body.round;
+    const wrong = view.answers.find((a: any) => a.text !== card.trueAnswer)!;
 
-    // Le parieur mise tout sur une reponse qu'on sait fausse : il tombe a zero.
-    const bv = await as(bettors[0]!).get(`/rounds/${roundId}`);
-    const wrong = bv.body.round.answers.find((a: any) => a.text !== trueAnswer);
-    await as(bettors[0]!)
-      .post(`/rounds/${roundId}/bets`)
-      .send({ bets: [{ answerId: wrong.id, amount: 10 }] })
+    await as(bettor)
+      .post(`/rounds/${round.id}/bets`)
+      .send({ bets: [{ answerId: wrong.id, amount: view.myBudget }] })
       .expect(201);
 
-    const final = await as(bluffeur).get(`/sessions/${session.id}`).expect(200);
+    const final = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
     expect(final.body.session.status).toBe("FINISHED");
-    expect(final.body.session.winnerId).toBe(bluffeur.id);
-    const loser = final.body.session.players.find((p: any) => p.userId === bettors[0]!.id);
-    expect(loser.points).toBe(0);
-    expect(loser.isEliminated).toBe(true);
+    expect(final.body.session.winnerId).toBe(round.bluffeur.id);
   });
 
-  it("elimine le joueur qui abandonne et poursuit la partie a trois", async () => {
+  it("elimine le joueur qui abandonne et poursuit a trois", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
     await as(players[2]!).post(`/sessions/${session.id}/quit`).expect(200);
 
     const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
     expect(view.body.session.status).toBe("IN_PROGRESS");
-    const quitter = view.body.session.players.find((p: any) => p.userId === players[2]!.id);
-    expect(quitter.isEliminated).toBe(true);
 
-    // Le joueur parti n'est plus designe comme bluffeur ni comme parieur.
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const ids = res.body.round.participants.map((p: any) => p.user.id);
-    expect(ids).not.toContain(players[2]!.id);
-    expect(ids).toHaveLength(2);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const after = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    // Le joueur parti ne recoit plus de carte.
+    expect(after.body.session.cardsTotal).toBe(2);
   });
 
-  it("termine la partie quand il ne reste qu'un joueur apres des abandons", async () => {
+  it("termine la partie quand il ne reste qu'un joueur", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
     await as(players[1]!).post(`/sessions/${session.id}/quit`).expect(200);
     const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
@@ -334,7 +439,11 @@ describe("cas limites", () => {
 describe("gestion du paquet de cartes", () => {
   /** Ne laisse que `keep` cartes jouables, pour rendre les tirages deterministes. */
   async function shrinkDeck(theme: string, keep: number) {
-    const kept = await prisma.card.findMany({ where: { theme }, take: keep, orderBy: { id: "asc" } });
+    const kept = await prisma.card.findMany({
+      where: { theme },
+      take: keep,
+      orderBy: { id: "asc" },
+    });
     await prisma.card.updateMany({
       where: { id: { notIn: kept.map((c) => c.id) } },
       data: { status: "REJECTED" },
@@ -342,36 +451,25 @@ describe("gestion du paquet de cartes", () => {
     return kept;
   }
 
-  it("ne sert jamais deux fois la meme carte au meme salon, meme d'une partie a l'autre", async () => {
-    const kept = await shrinkDeck("animaux", 2);
-    const players = [await signUp("Ana"), await signUp("Bruno")];
-    const group = (
-      await as(players[0]!).post("/groups").send({ name: "Salon", themes: ["animaux"] }).expect(201)
-    ).body.group;
-    await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
+  async function cardsOfManche(sessionId: string) {
+    const rounds = await prisma.round.findMany({ where: { sessionId }, select: { cardId: true } });
+    return rounds.map((r) => r.cardId);
+  }
 
-    const s1 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
-    const r1 = await as(players[0]!).post(`/sessions/${s1.id}/rounds`).expect(201);
-    const card1 = await prisma.round.findUniqueOrThrow({
-      where: { id: r1.body.round.id },
-      select: { cardId: true },
+  it("distribue des cartes differentes aux joueurs d'une meme manche", async () => {
+    await shrinkDeck("animaux", 6);
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
+      themes: ["animaux"],
     });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
 
-    // Fin de la partie, puis nouvelle partie dans le MEME salon.
-    await as(players[1]!).post(`/sessions/${s1.id}/quit`).expect(200);
-    const s2 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
-    const r2 = await as(players[0]!).post(`/sessions/${s2.id}/rounds`).expect(201);
-    const card2 = await prisma.round.findUniqueOrThrow({
-      where: { id: r2.body.round.id },
-      select: { cardId: true },
-    });
-
-    expect(card2.cardId).not.toBe(card1.cardId);
-    expect(kept.map((c) => c.id)).toContain(card2.cardId);
+    const cards = await cardsOfManche(session.id);
+    expect(cards).toHaveLength(3);
+    expect(new Set(cards).size).toBe(3);
   });
 
-  it("recycle le paquet plutot que de bloquer la partie quand il est epuise", async () => {
-    await shrinkDeck("animaux", 1);
+  it("ne sert jamais deux fois la meme carte au meme salon", async () => {
+    await shrinkDeck("animaux", 4);
     const players = [await signUp("Ana"), await signUp("Bruno")];
     const group = (
       await as(players[0]!).post("/groups").send({ name: "Salon", themes: ["animaux"] }).expect(201)
@@ -379,11 +477,33 @@ describe("gestion du paquet de cartes", () => {
     await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
 
     const s1 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
-    await as(players[0]!).post(`/sessions/${s1.id}/rounds`).expect(201);
-    await as(players[1]!).post(`/sessions/${s1.id}/quit`).expect(200);
+    await as(players[0]!).post(`/sessions/${s1.id}/manches`).expect(201);
+    const first = await cardsOfManche(s1.id);
 
+    await as(players[1]!).post(`/sessions/${s1.id}/quit`).expect(200);
     const s2 = (await as(players[0]!).post(`/groups/${group.id}/sessions`).expect(201)).body.session;
-    await as(players[0]!).post(`/sessions/${s2.id}/rounds`).expect(201);
+    await as(players[0]!).post(`/sessions/${s2.id}/manches`).expect(201);
+    const second = await cardsOfManche(s2.id);
+
+    expect(second.some((c) => first.includes(c))).toBe(false);
+  });
+
+  it("recycle le paquet plutot que de bloquer quand il est epuise", async () => {
+    await shrinkDeck("animaux", 2);
+    const { players, session } = await setupSession(["Ana", "Bruno"], {
+      themes: ["animaux"],
+      allowNoneOption: false,
+    });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
+
+    const current = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    for (const p of players) await betOnTruth(p, current.id);
+    const next = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    for (const p of players) await betOnTruth(p, next.id);
+
+    // Le paquet est vide : la manche suivante doit quand meme s'ouvrir.
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
   });
 
   it("ne propose pas une thematique entierement retiree du tirage", async () => {
@@ -394,18 +514,20 @@ describe("gestion du paquet de cartes", () => {
 });
 
 describe("signalement des cartes", () => {
-  async function playedRound() {
+  /** Ouvre une manche et rend la carte distribuee au premier joueur. */
+  async function playedCard() {
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const card = await prisma.round.findUniqueOrThrow({
-      where: { id: res.body.round.id },
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const round = await prisma.round.findUniqueOrThrow({
+      where: { id: mine.id },
       select: { cardId: true },
     });
-    return { players, cardId: card.cardId };
+    return { players, cardId: round.cardId };
   }
 
   it("accepte le signalement d'un joueur qui a vu la carte", async () => {
-    const { players, cardId } = await playedRound();
+    const { players, cardId } = await playedCard();
     const res = await as(players[0]!)
       .post(`/cards/${cardId}/report`)
       .send({ reason: "La reponse est fausse" })
@@ -415,136 +537,95 @@ describe("signalement des cartes", () => {
   });
 
   it("refuse le signalement d'un joueur qui n'a pas joue la carte", async () => {
-    const { cardId } = await playedRound();
+    const { cardId } = await playedCard();
     const intrus = await signUp("Intrus");
     const res = await as(intrus).post(`/cards/${cardId}/report`).expect(403);
     expect(res.body.error.code).toBe("CARD_NOT_PLAYED");
   });
 
   it("refuse un second signalement du meme joueur", async () => {
-    const { players, cardId } = await playedRound();
+    const { players, cardId } = await playedCard();
     await as(players[0]!).post(`/cards/${cardId}/report`).expect(201);
     const res = await as(players[0]!).post(`/cards/${cardId}/report`).expect(409);
     expect(res.body.error.code).toBe("ALREADY_REPORTED");
   });
 
   it("retire automatiquement une carte du tirage au troisieme signalement", async () => {
-    const { players, cardId } = await playedRound();
+    const { players, cardId } = await playedCard();
     await as(players[0]!).post(`/cards/${cardId}/report`).expect(201);
     await as(players[1]!).post(`/cards/${cardId}/report`).expect(201);
     const res = await as(players[2]!).post(`/cards/${cardId}/report`).expect(201);
     expect(res.body.card.status).toBe("REJECTED");
-
-    const card = await prisma.card.findUniqueOrThrow({ where: { id: cardId } });
-    expect(card.status).toBe("REJECTED");
   });
 });
 
-describe("rounds expires — le filet de securite de l'asynchrone", () => {
+describe("cartes expirees — le filet de securite de l'asynchrone", () => {
   const past = () => new Date(Date.now() - 60_000);
 
-  it("annule le round et penalise le bluffeur qui n'a pas ecrit a temps", async () => {
+  it("annule la carte du joueur qui n'a pas ecrit, et laisse la manche avancer", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
-      startingPoints: 20,
-      stakeBudget: 10,
+      startingPoints: 40,
     });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const bluffeurId = res.body.round.bluffeur.id;
-    const bettorIds: string[] = res.body.round.participants
-      .filter((p: any) => p.role === "BETTOR")
-      .map((p: any) => p.user.id);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
 
-    // Le bluffeur ne fait rien et la deadline passe.
-    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
+    // Deux joueurs sur trois ecrivent ; le troisieme laisse filer.
+    await writeAll([players[0]!, players[1]!], session.id);
+    const silent = (await as(players[2]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { deadlineAt: past() } });
 
-    // Un simple coup d'oeil sur la partie suffit a la debloquer.
     const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    const round = await prisma.round.findUniqueOrThrow({ where: { id: roundId } });
-    expect(round.status).toBe("CANCELLED");
+    const cancelled = await prisma.round.findUniqueOrThrow({ where: { id: silent.id } });
+    expect(cancelled.status).toBe("CANCELLED");
 
+    // La manche n'est pas bloquee : une carte s'ouvre aux mises.
+    expect(view.body.session.currentRound.status).toBe("BETTING");
+
+    // Le silencieux a paye, les autres ont recu.
     const points = Object.fromEntries(
       view.body.session.players.map((p: any) => [p.userId, p.points]),
     );
-    expect(points[bluffeurId]).toBe(10); // 20 - 10 de penalite
-    for (const id of bettorIds) expect(points[id]).toBe(25); // 20 + 5 chacun
+    expect(points[players[2]!.id]).toBeLessThan(40);
     const total = Object.values(points).reduce((s: number, p: any) => s + p, 0);
-    expect(total).toBe(60); // toujours a somme nulle
+    expect(total).toBe(120); // toujours a somme nulle
   });
 
   it("expose le motif de l'annulation au joueur", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { deadlineAt: past() } });
 
-    const view = await as(players[0]!).get(`/rounds/${roundId}`).expect(200);
+    const view = await as(players[0]!).get(`/rounds/${mine.id}`).expect(200);
     expect(view.body.round.status).toBe("CANCELLED");
     expect(view.body.round.cancelReason).toBe("BLUFFEUR_TIMEOUT");
-    expect(view.body.round.result.deltas).toHaveLength(2);
   });
 
-  it("permet de repartir sur un nouveau round apres un abandon", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
-    const first = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const ghost = first.body.round.bluffeur.id;
-    await prisma.round.update({
-      where: { id: first.body.round.id },
-      data: { deadlineAt: past() },
-    });
+  it("fait payer un forfait partiel au parieur qui laisse passer la deadline", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno"], { startingPoints: 40 });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll(players, session.id);
 
-    // Sans balayage, cet appel echouerait en ROUND_IN_PROGRESS pour toujours.
-    const second = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    expect(second.body.round.bluffeur.id).not.toBe(ghost);
-  });
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    await prisma.round.update({ where: { id: round.id }, data: { deadlineAt: past() } });
 
-  it("resout un round de mises expire en faisant payer le forfait", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"], {
-      startingPoints: 20,
-      stakeBudget: 10,
-      allowNoneOption: false,
-    });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const roundId = res.body.round.id;
-    const { bluffeur, bettors } = splitRoles(players, res.body.round.bluffeur.id);
-    await as(bluffeur).post(`/rounds/${roundId}/answers`).send({ answers: ["A", "B"] }).expect(201);
-
-    // Le parieur ne mise jamais.
-    await prisma.round.update({ where: { id: roundId }, data: { deadlineAt: past() } });
-
-    const view = await as(bluffeur).get(`/sessions/${session.id}`).expect(200);
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
     const points = Object.fromEntries(
       view.body.session.players.map((p: any) => [p.userId, p.points]),
     );
-    expect(points[bluffeur.id]).toBe(30); // recupere le budget non mise
-    expect(points[bettors[0]!.id]).toBe(10);
+    // Un quart de son capital, pas la totalite : rater une notification ne
+    // doit pas eliminer.
+    expect(points[bettor.id]).toBe(30);
+    expect(points[round.bluffeur.id]).toBe(50);
   });
 
-  it("ne touche pas a un round dont la deadline n'est pas passee", async () => {
+  it("ne touche pas a une carte dont la deadline n'est pas passee", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
     await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    const round = await prisma.round.findUniqueOrThrow({ where: { id: res.body.round.id } });
+    const round = await prisma.round.findUniqueOrThrow({ where: { id: mine.id } });
     expect(round.status).toBe("WRITING");
-  });
-
-  it("termine la partie si la penalite elimine le bluffeur", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"], {
-      startingPoints: 8,
-      stakeBudget: 10,
-    });
-    const res = await as(players[0]!).post(`/sessions/${session.id}/rounds`).expect(201);
-    const bluffeurId = res.body.round.bluffeur.id;
-    await prisma.round.update({
-      where: { id: res.body.round.id },
-      data: { deadlineAt: past() },
-    });
-
-    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    expect(view.body.session.status).toBe("FINISHED");
-    expect(view.body.session.winnerId).not.toBe(bluffeurId);
-    const loser = view.body.session.players.find((p: any) => p.userId === bluffeurId);
-    expect(loser.points).toBe(0);
   });
 });
 

@@ -29,9 +29,13 @@ export interface ScoringInput {
   /** Budget de mise effectif de chaque parieur, pour detecter les mises « tout sur la vraie ». */
   budgets: Record<string, number>;
   /**
-   * Parieurs qui n'ont rien soumis avant la deadline. Leur budget part au
+   * Parieurs qui n'ont rien soumis avant la deadline. Le montant part au
    * bluffeur. Sans cette penalite, ne jamais miser serait la strategie
    * optimale : on ne peut que perdre des points en jouant.
+   *
+   * Ce n'est PAS tout leur capital : puisqu'ils misent normalement l'integralite
+   * de ce qu'ils ont, le leur prendre en entier les eliminerait pour une
+   * notification ratee. Voir FORFEIT_RATIO.
    */
   forfeits?: { bettorId: string; amount: number }[];
   modifiers: RoundModifiers;
@@ -81,15 +85,22 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
   const mult = modifiers.transferMultiplier;
 
   // --- Phase 1 : les transferts sortants des parieurs. ---------------------
-  // Ils ne peuvent jamais rendre un parieur negatif : la somme de ses mises est
-  // bornee par son budget, lui-meme plafonne a son capital.
+  // La mise est bornee par le capital, mais un multiplicateur de transfert
+  // (twist « Double ou rien ») peut la depasser : on plafonne donc chaque
+  // sortie a ce qu'il reste reellement, sinon un joueur finirait avec un
+  // capital negatif.
+  const takeFrom = (userId: string, wanted: number): number => {
+    const available = Math.max(0, (pointsBefore.get(userId) ?? 0) + deltas[userId]!);
+    return Math.min(wanted, available);
+  };
+
   for (const bet of bets) {
     ensureKnown(bet.bettorId);
     if (bet.amount <= 0) continue;
 
     if (bet.isNoneOption) {
       if (noneOptionIsCorrect) continue; // traite en phase 2 (le bluffeur paie)
-      const loss = Math.round(bet.amount * mult);
+      const loss = takeFrom(bet.bettorId, Math.round(bet.amount * mult));
       deltas[bet.bettorId]! -= loss;
       deltas[bluffeurId]! += loss;
       continue;
@@ -103,7 +114,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
 
     const beneficiary = answer.authorId ?? bluffeurId;
     ensureKnown(beneficiary);
-    const loss = Math.round(bet.amount * mult);
+    const loss = takeFrom(bet.bettorId, Math.round(bet.amount * mult));
     deltas[bet.bettorId]! -= loss;
     deltas[beneficiary]! += loss;
   }
@@ -111,7 +122,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
   for (const forfeit of forfeits) {
     ensureKnown(forfeit.bettorId);
     if (forfeit.amount <= 0) continue;
-    const loss = Math.round(forfeit.amount * mult);
+    const loss = takeFrom(forfeit.bettorId, Math.round(forfeit.amount * mult));
     deltas[forfeit.bettorId]! -= loss;
     deltas[bluffeurId]! += loss;
   }

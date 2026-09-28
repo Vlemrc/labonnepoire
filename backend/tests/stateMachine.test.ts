@@ -18,7 +18,6 @@ const round = (overrides: Partial<RoundSnapshot> = {}): RoundSnapshot => ({
   status: "BETTING",
   mode: "STANDARD",
   bluffeurId: "b",
-  stakeBudget: 10,
   allowNoneOption: false,
   deadlineAt: null,
   participants: [

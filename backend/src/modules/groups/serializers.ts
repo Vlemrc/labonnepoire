@@ -9,7 +9,6 @@ export function toGroupSummary(group: GroupWithMembers): GroupSummary {
     name: group.name,
     ownerId: group.ownerId,
     startingPoints: group.startingPoints,
-    stakeBudget: group.stakeBudget,
     themes: group.themes,
     allowNoneOption: group.allowNoneOption,
     twistsEnabled: group.twistsEnabled,

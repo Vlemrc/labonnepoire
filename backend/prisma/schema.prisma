@@ -19,7 +19,11 @@ enum SessionStatus {
 }
 
 enum RoundStatus {
+  // Le proprietaire de la carte ecrit ses mensonges. Tous les joueurs y sont
+  // en meme temps au debut d'une manche.
   WRITING
+  // Mensonges ecrits, la carte attend son tour de passage.
+  PENDING
   BETTING
   RESOLVED
   CANCELLED
@@ -78,7 +82,6 @@ model Group {
   ownerId            String
   owner              User     @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   startingPoints     Int      @default(20)
-  stakeBudget        Int      @default(10)
   themes             String[]
   allowNoneOption    Boolean  @default(true)
   twistsEnabled      Boolean  @default(true)
@@ -192,6 +195,9 @@ model Round {
   id        String      @id @default(cuid())
   sessionId String
   session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // Numero de manche. Une manche distribue une carte a chaque joueur, ils
+  // ecrivent tous en parallele, puis les cartes se jouent une par une.
+  manche    Int         @default(1)
   number    Int
   cardId    String
   card      Card        @relation(fields: [cardId], references: [id])
@@ -199,9 +205,6 @@ model Round {
   bluffeur   User       @relation("RoundBluffeur", fields: [bluffeurId], references: [id])
   mode      RoundMode   @default(STANDARD)
   status    RoundStatus @default(WRITING)
-  // Fige a la creation du round : un changement de reglage du salon en cours de
-  // partie ne doit pas modifier un round deja lance.
-  stakeBudget        Int
   allowNoneOption    Boolean @default(false)
   twistCode          String?
   twistActivatedById String?
@@ -218,7 +221,7 @@ model Round {
   bets         Bet[]
   participants RoundParticipant[]
 
-  @@unique([sessionId, number])
+  @@unique([sessionId, manche, number])
   @@index([status, deadlineAt])
 }
 

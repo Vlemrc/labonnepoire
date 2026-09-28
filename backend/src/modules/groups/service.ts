@@ -61,7 +61,6 @@ export async function createGroup(
         ownerId,
         themes: input.themes,
         ...(input.startingPoints !== undefined ? { startingPoints: input.startingPoints as number } : {}),
-        ...(input.stakeBudget !== undefined ? { stakeBudget: input.stakeBudget as number } : {}),
         ...(input.allowNoneOption !== undefined ? { allowNoneOption: input.allowNoneOption as boolean } : {}),
         ...(input.twistsEnabled !== undefined ? { twistsEnabled: input.twistsEnabled as boolean } : {}),
         ...(input.roundDurationHours !== undefined

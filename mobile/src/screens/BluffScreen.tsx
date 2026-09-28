@@ -46,8 +46,8 @@ export function BluffScreen({ round }: { round: RoundView }) {
         <Deadline deadlineAt={round.deadlineAt} />
       </View>
       <Body muted>
-        Passe ce delai, le round est annule et tu perds {round.stakeBudget} points
-        au profit des autres.
+        Tout le monde ecrit en meme temps. Passe le delai, ta carte est annulee
+        et tu perds des points au profit des autres.
       </Body>
 
       <Appear index={0}>

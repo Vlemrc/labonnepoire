@@ -15,21 +15,42 @@ provisoires.
 
 ## Regles du jeu
 
-- Chaque joueur demarre avec un **capital** (20 points par defaut).
-- A chaque round, un **bluffeur** recoit une carte et ecrit **2 fausses reponses**.
-- Les 3 reponses sont presentees melangees aux **parieurs**, qui repartissent
-  librement un **budget fixe** (10 jetons par defaut) entre elles — par exemple
-  7 / 2 / 1. La totalite du budget doit etre engagee.
-- Resolution :
-  - jetons poses sur la **vraie** reponse -> recuperes,
-  - jetons poses sur une **fausse** reponse -> perdus au profit de son auteur,
-  - parieur qui **ne mise pas** avant la deadline -> son budget part au bluffeur.
-- Les roles tournent a chaque round. Un joueur a **0 point est elimine** ; la
-  partie s'arrete quand il ne reste qu'un joueur.
+Une partie se joue en **manches**. Chaque manche suit deux temps :
 
-Le jeu est **a somme nulle** : aucun point n'est cree ni detruit, ce qui garantit
-qu'une partie se termine. Cet invariant est verifie par assertion a chaque
-resolution (`assertZeroSum`) et par les tests.
+**1. Tout le monde ecrit, en meme temps.** Chaque joueur recoit *sa* carte —
+une question insolite et sa vraie reponse — et invente **2 fausses reponses**.
+La manche ne demarre que lorsque le dernier a soumis.
+
+**2. Les cartes se jouent une par une.** On affiche la carte d'un joueur avec
+les 3 reponses melangees, tous les autres misent, on fait le point des scores,
+puis on passe a la carte suivante. Quand toutes les cartes sont jouees, la
+manche est close et on peut en relancer une.
+
+Ce decoupage est ce qui rend le jeu tenable en asynchrone : **deux temps
+d'attente par manche**, au lieu de deux par joueur si les cartes s'enchainaient
+une a une du debut a la fin.
+
+### Les jetons
+
+Chaque joueur demarre avec un **capital** (20 par defaut, configurable). Sur
+chaque carte, il **engage la totalite de ce qu'il lui reste** et le repartit
+librement entre les propositions.
+
+- jetons poses sur la **vraie** reponse -> recuperes, ils repartent sur la carte suivante
+- jetons poses sur une **fausse** reponse -> perdus au profit de son auteur
+- parieur qui **laisse passer la deadline** -> il perd un quart de son capital
+
+Exemple : tu commences a 20, tu mises 10 sur la bonne reponse et 10 a cote ; a
+la carte suivante tu joues avec 10.
+
+Un joueur a **0 point est elimine** ; la partie s'arrete quand il ne reste
+qu'un joueur.
+
+Le jeu est **a somme nulle** : aucun point n'est cree ni detruit, ce qui
+garantit qu'une partie se termine. Cet invariant est verifie par assertion a
+chaque resolution (`assertZeroSum`). Corollaire moins evident : un transfert ne
+peut jamais rendre un capital negatif, y compris sous un twist qui double les
+echanges — la sortie est plafonnee a ce que le joueur possede reellement.
 
 ### Quand un joueur laisse tomber
 

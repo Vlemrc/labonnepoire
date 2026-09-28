@@ -31,13 +31,14 @@ export function toRoundView(round: RoundWithRelations, viewerId: string): RoundV
   return {
     id: round.id,
     sessionId: round.sessionId,
+    manche: round.manche,
     number: round.number,
     cardId: isResolved ? round.cardId : null,
     status: round.status,
     // Le mode reste cache aux parieurs tant que le round n'est pas resolu :
     // savoir qu'on est en FULL_BLUFF rendrait l'option « aucune » gratuite.
     mode: isBluffeur || isResolved ? round.mode : "STANDARD",
-    stakeBudget: round.stakeBudget,
+    myBudget: round.participants.find((p) => p.userId === viewerId)?.budget ?? 0,
     allowNoneOption: round.allowNoneOption,
     deadlineAt: round.deadlineAt?.toISOString() ?? null,
     bluffeur: toPublicUser(round.bluffeur),

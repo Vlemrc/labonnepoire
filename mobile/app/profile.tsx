@@ -45,7 +45,6 @@ export default function Profile() {
                 name: pending.name,
                 themes: pending.themes,
                 startingPoints: pending.startingPoints,
-                stakeBudget: pending.stakeBudget,
               },
             })
           : await api<{ group: GroupSummary }>("/groups/join", {

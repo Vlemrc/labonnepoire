@@ -1,4 +1,4 @@
-export type RoundStatus = "WRITING" | "BETTING" | "RESOLVED" | "CANCELLED";
+export type RoundStatus = "WRITING" | "PENDING" | "BETTING" | "RESOLVED" | "CANCELLED";
 export type RoundMode = "STANDARD" | "FULL_BLUFF";
 export type RoundRole = "BLUFFEUR" | "BETTOR";
 
@@ -7,8 +7,6 @@ export type RoundRole = "BLUFFEUR" | "BETTOR";
  * Ajouter un levier ici = tous les twists en beneficient, sans toucher au moteur.
  */
 export interface RoundModifiers {
-  /** Multiplie le budget de mise distribue aux parieurs. */
-  stakeBudgetMultiplier: number;
   /** Multiplie les points qui changent de main a la resolution. */
   transferMultiplier: number;
   /** Interdit de repartir : tout le budget sur une seule reponse. */
@@ -20,7 +18,6 @@ export interface RoundModifiers {
 }
 
 export const NEUTRAL_MODIFIERS: RoundModifiers = {
-  stakeBudgetMultiplier: 1,
   transferMultiplier: 1,
   requireSingleAnswerBet: false,
   bluffeurAnte: 0,
@@ -39,7 +36,6 @@ export interface RoundSnapshot {
   status: RoundStatus;
   mode: RoundMode;
   bluffeurId: string;
-  stakeBudget: number;
   allowNoneOption: boolean;
   deadlineAt: Date | null;
   participants: RoundParticipantSnapshot[];

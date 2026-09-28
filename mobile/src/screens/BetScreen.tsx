@@ -84,9 +84,9 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
       ) : null}
 
       <Body muted>
-        Repartis tes {budget} jetons comme tu veux. Ceux poses sur la vraie
-        reponse te reviennent, les autres partent chez celui qui a menti. Si tu
-        laisses passer le delai, tu les perds tous.
+        Tu engages la totalite de ton capital : {budget} jetons. Ceux poses sur
+        la vraie reponse te reviennent et repartent sur la carte suivante, les
+        autres tombent chez celui qui a menti.
       </Body>
 
       {options.map((option, index) => {
@@ -119,10 +119,19 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
                 onPress={() => change(option.key, 1)}
                 disabled={remaining === 0}
               />
+              {/* Le budget est le capital entier : il peut depasser la
+                  cinquantaine, et un pas de 1 rendrait l'ecran inutilisable. */}
+              <StepperButton
+                label="+5"
+                small
+                onPress={() => change(option.key, Math.min(5, remaining))}
+                disabled={remaining === 0}
+              />
               <View style={{ flex: 1 }} />
-              {amount > 0 && remaining > 0 ? (
+              {remaining > 0 ? (
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`Tout miser sur ${option.text}`}
                   onPress={() => change(option.key, remaining)}
                 >
                   <Text style={s.allIn}>Tout ici</Text>
@@ -141,10 +150,12 @@ function StepperButton({
   label,
   onPress,
   disabled,
+  small,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  small?: boolean;
 }) {
   return (
     <Pressable
@@ -153,9 +164,9 @@ function StepperButton({
       accessibilityState={{ disabled: Boolean(disabled) }}
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [s.step, disabled && s.stepDisabled, pressed && !disabled && { opacity: 0.7 }]}
+      style={({ pressed }) => [s.step, small && s.stepSmall, disabled && s.stepDisabled, pressed && !disabled && { opacity: 0.7 }]}
     >
-      <Text style={s.stepLabel}>{label}</Text>
+      <Text style={[s.stepLabel, small && s.stepLabelSmall]}>{label}</Text>
     </Pressable>
   );
 }
@@ -195,8 +206,10 @@ const s = StyleSheet.create({
     justifyContent: "center",
     ...sticker,
   },
+  stepSmall: { width: 52, height: 40 },
   stepDisabled: { opacity: 0.3 },
   stepLabel: { fontFamily: fonts.display, fontSize: 22, color: colors.text, lineHeight: 26 },
+  stepLabelSmall: { fontSize: 15, lineHeight: 18 },
   amount: { fontFamily: fonts.display, fontSize: 24, color: colors.text, minWidth: 34, textAlign: "center" },
   allIn: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },

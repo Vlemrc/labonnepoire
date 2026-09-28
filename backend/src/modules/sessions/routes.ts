@@ -2,9 +2,8 @@ import { Router } from "express";
 import { requireAuth, currentUser } from "../../middleware/auth.js";
 import { assertSessionPlayer, loadSession, quitSession } from "./service.js";
 import { toSessionView } from "./serializers.js";
-import { createNextRound } from "../rounds/service.js";
+import { startManche } from "../rounds/service.js";
 import { sweepExpiredRounds } from "../rounds/sweep.js";
-import { toRoundView } from "../rounds/serializers.js";
 
 export const sessionsRouter = Router();
 sessionsRouter.use(requireAuth);
@@ -19,11 +18,12 @@ sessionsRouter.get("/:sessionId", async (req, res) => {
   res.json({ session: toSessionView(await loadSession(req.params.sessionId), userId) });
 });
 
-sessionsRouter.post("/:sessionId/rounds", async (req, res) => {
+/** Distribue une carte a chaque joueur et ouvre la phase d'ecriture. */
+sessionsRouter.post("/:sessionId/manches", async (req, res) => {
   const userId = currentUser(req).id;
   await assertSessionPlayer(req.params.sessionId, userId);
-  const round = await createNextRound(req.params.sessionId, userId);
-  res.status(201).json({ round: toRoundView(round, userId) });
+  const session = await startManche(req.params.sessionId, userId);
+  res.status(201).json({ session: toSessionView(session, userId) });
 });
 
 sessionsRouter.post("/:sessionId/quit", async (req, res) => {

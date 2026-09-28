@@ -78,7 +78,7 @@ export function useCreateGroup() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { name: string; themes: string[]; startingPoints?: number; stakeBudget?: number }) =>
+    mutationFn: (input: { name: string; themes: string[]; startingPoints?: number }) =>
       api<{ group: GroupSummary }>("/groups", { method: "POST", body: input, token }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
   });
@@ -104,12 +104,13 @@ export function useStartSession() {
   });
 }
 
-export function useStartRound() {
+/** Distribue une carte a chaque joueur et ouvre la phase d'ecriture. */
+export function useStartManche() {
   const token = useToken();
   const refresh = useRefreshGame();
   return useMutation({
     mutationFn: (sessionId: string) =>
-      api<{ round: RoundView }>(`/sessions/${sessionId}/rounds`, { method: "POST", token }),
+      api<{ session: SessionView }>(`/sessions/${sessionId}/manches`, { method: "POST", token }),
     onSuccess: refresh,
   });
 }

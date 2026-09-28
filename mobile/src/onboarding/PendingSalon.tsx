@@ -15,7 +15,6 @@ export type PendingSalon =
       name: string;
       themes: string[];
       startingPoints: number;
-      stakeBudget: number;
     }
   | { kind: "join"; code: string };
 

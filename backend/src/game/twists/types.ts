@@ -3,8 +3,8 @@ import type { RoundModifiers } from "../types.js";
 export interface TwistContext {
   /** Nombre de parieurs dans le round. */
   bettorCount: number;
-  /** Budget de mise de base du salon. */
-  baseStakeBudget: number;
+  /** Capital du bluffeur au moment ou la carte se joue. */
+  bluffeurPoints: number;
 }
 
 export interface TwistDefinition {

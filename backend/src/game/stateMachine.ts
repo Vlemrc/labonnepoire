@@ -8,6 +8,7 @@ import type {
   RoundMode,
   RoundModifiers,
   RoundSnapshot,
+  RoundStatus,
   SessionPlayerSnapshot,
 } from "./types.js";
 
@@ -24,6 +25,17 @@ export function normalizeAnswer(text: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+}
+
+/**
+ * Toutes les cartes d'une manche ont-elles recu leurs mensonges ?
+ *
+ * Les joueurs ecrivent en parallele ; la manche ne demarre que lorsque le
+ * dernier a soumis. C'est ce qui remplace l'ancienne suite de rounds joues
+ * l'un apres l'autre, et divise par autant le nombre de temps d'attente.
+ */
+export function allCardsWritten(statuses: RoundStatus[]): boolean {
+  return statuses.length > 0 && statuses.every((s) => s !== "WRITING");
 }
 
 export function assertCanSubmitAnswers(round: RoundSnapshot, userId: string): void {
@@ -105,9 +117,11 @@ export interface BetLine {
 }
 
 /**
- * Valide une repartition de mises. Le parieur doit engager exactement son
- * budget : autoriser une mise partielle reviendrait a offrir une option sans
- * risque, ce qui casse l'equilibre a somme nulle du round.
+ * Valide une repartition de mises.
+ *
+ * Le budget d'un parieur est la TOTALITE de son capital, et il doit l'engager
+ * entierement : on avance de carte en carte avec ce qu'il reste. Autoriser une
+ * mise partielle reviendrait a offrir une option sans risque.
  */
 export function validateBetDistribution(
   lines: BetLine[],
