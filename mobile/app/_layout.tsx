@@ -102,6 +102,9 @@ function AuthGate() {
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
         headerTitleStyle: { fontFamily: fonts.display },
+        // Chevron seul : le libelle de l'ecran precedent tronque les titres
+        // longs et n'apprend rien que la fleche ne dise deja.
+        headerBackButtonDisplayMode: "minimal",
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

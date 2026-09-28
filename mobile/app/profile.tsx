@@ -96,7 +96,11 @@ export default function Profile() {
 
       <View style={s.preview}>
         <Avatar avatar={avatar} size={120} />
-        <Text style={s.previewName}>{AVATAR_LABELS[avatar]}</Text>
+        {/* Apercu de l'identite telle que les autres la verront : le pseudo
+            s'ecrit ici a mesure qu'on le tape, pas le nom de la vignette. */}
+        <Text style={[s.previewName, !pseudo.trim() && s.previewNamePlaceholder]}>
+          {pseudo.trim() || "Ton pseudo"}
+        </Text>
       </View>
 
       <Field
@@ -132,7 +136,14 @@ export default function Profile() {
 
 const s = StyleSheet.create({
   preview: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
-  previewName: { fontFamily: fonts.display, fontSize: 15, color: colors.textMuted },
+  previewName: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    letterSpacing: -0.5,
+    color: colors.text,
+    textAlign: "center",
+  },
+  previewNamePlaceholder: { color: colors.textMuted, opacity: 0.6 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   option: {
     padding: 4,

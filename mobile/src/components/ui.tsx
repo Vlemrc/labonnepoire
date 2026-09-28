@@ -117,12 +117,25 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
 }
 
 export function Avatar({ avatar, size = 44 }: { avatar: string; size?: number }) {
+  // Un fond sous l'image : en developpement les vignettes arrivent depuis
+  // Metro et le premier rendu est vide. Sans ce disque, la ligne d'un joueur
+  // affiche un trou pendant le chargement, ce qui donne l'app pour cassee.
   return (
-    <Image
-      source={avatarSource(avatar)}
-      style={{ width: size, height: size, borderRadius: size / 2 }}
-      accessibilityIgnoresInvertColors
-    />
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: colors.surfaceHigh,
+        overflow: "hidden",
+      }}
+    >
+      <Image
+        source={avatarSource(avatar)}
+        style={{ width: size, height: size }}
+        accessibilityIgnoresInvertColors
+      />
+    </View>
   );
 }
 
