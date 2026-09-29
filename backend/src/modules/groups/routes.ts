@@ -5,6 +5,7 @@ import { toGroupSummary } from "./serializers.js";
 import {
   assertMember,
   createGroup,
+  deleteGroup,
   joinGroup,
   listGroupsForUser,
   loadGroup,
@@ -45,6 +46,14 @@ groupsRouter.patch("/:groupId/settings", async (req, res) => {
   await assertMember(req.params.groupId, userId);
   const group = await updateSettings(req.params.groupId, userId, body);
   res.json({ group: toGroupSummary(group) });
+});
+
+/** Supprime le salon ; reserve a son createur. */
+groupsRouter.delete("/:groupId", async (req, res) => {
+  const userId = currentUser(req).id;
+  await assertMember(req.params.groupId, userId);
+  await deleteGroup(req.params.groupId, userId);
+  res.status(204).end();
 });
 
 /** Lance une partie avec les membres actuels du salon. */

@@ -30,6 +30,8 @@ export interface GroupSummary extends GroupSettings {
   ownerId: string;
   members: PublicUser[];
   activeSessionId: string | null;
+  /** Derniere partie, si elle est terminee et qu'aucune autre n'a ete lancee depuis. */
+  lastFinishedSessionId: string | null;
 }
 
 export interface SessionPlayerView {
@@ -38,6 +40,11 @@ export interface SessionPlayerView {
   avatar: AvatarId;
   points: number;
   isEliminated: boolean;
+  /** Instant de l'elimination (ISO) : ordonne les perdants sur l'ecran de fin. */
+  eliminatedAt: string | null;
+  eliminatedManche: number | null;
+  /** Carte fatale dans sa manche ; nulle pour un abandon. */
+  eliminatedCard: number | null;
   turnOrder: number;
   twistCardUsed: boolean;
 }
@@ -55,6 +62,11 @@ export interface SessionView {
   winnerId: string | null;
   players: SessionPlayerView[];
   currentRound: RoundView | null;
+  /**
+   * Les cartes de la manche, une par joueur. Pendant l'ecriture, une carte en
+   * WRITING signale un joueur qui n'a pas encore ecrit ses mensonges.
+   */
+  mancheCards: { roundId: string; number: number; status: RoundStatus; bluffeur: PublicUser }[];
 }
 
 /** Une reponse telle qu'elle est vue par un parieur AVANT resolution : rien ne fuite. */
@@ -99,6 +111,19 @@ export interface RoundView {
   twist: TwistView | null;
   /** Presente uniquement pour le bluffeur, pendant la phase WRITING. */
   card: { question: string; trueAnswer: string; theme: string } | null;
+  /**
+   * La question, sans la reponse : visible de tous des l'ouverture des mises,
+   * et toujours pour le bluffeur.
+   */
+  question: string | null;
+  /**
+   * Les mises recues, en direct : uniquement pour le bluffeur pendant BETTING.
+   * Il ne mise pas sur sa propre carte, les voir ne lui donne aucun avantage.
+   */
+  liveBets: {
+    trueAnswerId: string | null;
+    bets: { bettor: PublicUser; answerId: string | null; isNoneOption: boolean; amount: number }[];
+  } | null;
   /** Presente en phase BETTING (parieurs) : melangees, anonymes. */
   answers: AnswerPublicView[] | null;
   /** Ma propre repartition de mises, si deja soumise. */

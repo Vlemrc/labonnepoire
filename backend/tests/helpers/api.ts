@@ -49,4 +49,5 @@ export const as = (player: TestPlayer) => ({
   get: (url: string) => request(app).get(url).set("Authorization", `Bearer ${player.token}`),
   post: (url: string) => request(app).post(url).set("Authorization", `Bearer ${player.token}`),
   patch: (url: string) => request(app).patch(url).set("Authorization", `Bearer ${player.token}`),
+  delete: (url: string) => request(app).delete(url).set("Authorization", `Bearer ${player.token}`),
 });

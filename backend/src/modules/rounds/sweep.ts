@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { resolveAbandonedRound } from "../../game/scoring.js";
 import { evaluateSessionOutcome, isAbandonedInWriting } from "../../game/stateMachine.js";
-import { loadRound, resolveRoundAndScore } from "./service.js";
+import { eliminationUpdate, loadRound, resolveRoundAndScore } from "./service.js";
 
 export interface SweepResult {
   /** Rounds dont la deadline de mise est passee : resolus avec forfait. */
@@ -119,7 +119,7 @@ export async function cancelAbandonedRound(roundId: string, now: Date = new Date
       const after = outcome.pointsAfter[player.userId] ?? player.points;
       await tx.sessionPlayer.update({
         where: { id: player.id },
-        data: { points: after, isEliminated: player.isEliminated || after <= 0 },
+        data: { points: after, ...eliminationUpdate(player.isEliminated, after, now, round) },
       });
     }
     await tx.round.update({

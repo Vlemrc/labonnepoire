@@ -130,6 +130,12 @@ model SessionPlayer {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   points        Int
   isEliminated  Boolean     @default(false)
+  // Quand et a quelle manche le joueur est tombe : c'est ce qui ordonne les
+  // perdants sur l'ecran de fin. Nuls pour les parties d'avant cet ajout.
+  eliminatedAt     DateTime?
+  eliminatedManche Int?
+  // Numero de la carte fatale dans sa manche ; nul pour un abandon.
+  eliminatedCard   Int?
   turnOrder     Int
   // Prevu pour le mode equipes, non utilise par le MVP.
   teamId        String?

@@ -94,6 +94,19 @@ export function useJoinGroup() {
   });
 }
 
+/**
+ * Supprime le salon. On ne rafraichit que la liste : l'ecran du salon est
+ * quitte juste apres, et le recharger ne ferait qu'essuyer un 404.
+ */
+export function useDeleteGroup() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => api<void>(`/groups/${groupId}`, { method: "DELETE", token }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+  });
+}
+
 export function useStartSession() {
   const token = useToken();
   const refresh = useRefreshGame();

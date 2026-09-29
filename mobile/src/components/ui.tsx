@@ -20,10 +20,17 @@ export function Screen({
   children,
   scroll = true,
   footer,
+  headerless = false,
 }: {
   children: ReactNode;
   scroll?: boolean;
   footer?: ReactNode;
+  /**
+   * Ecran sans header natif. Le header reserve deja la zone de l'encoche :
+   * reprendre la marge du haut en plus laissait une bande vide sous lui, ou
+   * le contenu disparaissait au defilement.
+   */
+  headerless?: boolean;
 }) {
   const body = scroll ? (
     <ScrollView
@@ -38,7 +45,7 @@ export function Screen({
   );
 
   return (
-    <SafeAreaView style={s.screen} edges={["top", "left", "right"]}>
+    <SafeAreaView style={s.screen} edges={headerless ? ["top", "left", "right"] : ["left", "right"]}>
       {body}
       {footer ? <View style={s.footer}>{footer}</View> : null}
     </SafeAreaView>

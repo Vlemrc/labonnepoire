@@ -5,6 +5,7 @@ import { useSubmitBets } from "../api/hooks";
 import { Appear } from "../components/Appear";
 import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
+import { QuestionCard } from "../components/QuestionCard";
 import { colors, fonts, radius, spacing, sticker } from "../theme";
 
 const NONE_KEY = "__none__";
@@ -67,14 +68,18 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
     >
       <View style={s.header}>
         <View style={{ gap: spacing.xs }}>
-          <Title>Ou tu mises ?</Title>
+          <Title>Mise !</Title>
           <Deadline deadlineAt={round.deadlineAt} />
         </View>
         <View style={s.budget}>
           <Text style={s.budgetValue}>{remaining}</Text>
-          <Label>restants</Label>
+          <Label>{remaining > 1 ? "points restants" : "point restant"}</Label>
         </View>
       </View>
+
+      <Appear index={0}>
+        <QuestionCard question={round.question} />
+      </Appear>
 
       {round.twist ? (
         <Card style={{ borderColor: colors.secondary }}>
@@ -84,9 +89,9 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
       ) : null}
 
       <Body muted>
-        Tu engages la totalite de ton capital : {budget} jetons. Ceux poses sur
-        la vraie reponse te reviennent et repartent sur la carte suivante, les
-        autres tombent chez celui qui a menti.
+        Tu engages la totalité de ton capital : {budget} jetons. Ceux posés sur
+        la vraie réponse te reviennent et repartent sur la carte suivante, les
+        autres sont perdus.
       </Body>
 
       {options.map((option, index) => {
@@ -94,7 +99,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
         return (
           <Appear
             key={option.key}
-            index={index}
+            index={index + 1}
             // Les propositions sont posees de travers, comme des cartes jetees
             // sur une table. L'angle alterne pour qu'aucune ne semble alignee.
             style={{ transform: [{ rotate: `${(index % 2 === 0 ? -1 : 1) * 1.1}deg` }] }}
@@ -133,8 +138,9 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
                   accessibilityRole="button"
                   accessibilityLabel={`Tout miser sur ${option.text}`}
                   onPress={() => change(option.key, remaining)}
+                  style={({ pressed }) => [s.step, s.stepWide, pressed && { opacity: 0.7 }]}
                 >
-                  <Text style={s.allIn}>Tout ici</Text>
+                  <Text style={[s.stepLabel, s.stepLabelSmall]}>All in</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -194,7 +200,7 @@ const s = StyleSheet.create({
   indexActive: { borderColor: colors.secondary, backgroundColor: colors.secondary },
   indexText: { fontFamily: fonts.display, fontSize: 16, color: colors.textMuted },
   indexTextActive: { color: colors.surface },
-  stepper: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.xs },
+  stepper: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.xs },
   step: {
     width: 46,
     height: 46,
@@ -206,11 +212,12 @@ const s = StyleSheet.create({
     justifyContent: "center",
     ...sticker,
   },
-  stepSmall: { width: 52, height: 40 },
+  // Meme hauteur pour tous les boutons de la rangee : seule la largeur suit le libelle.
+  stepSmall: { width: 56 },
+  stepWide: { width: "auto", paddingHorizontal: spacing.md },
   stepDisabled: { opacity: 0.3 },
   stepLabel: { fontFamily: fonts.display, fontSize: 22, color: colors.text, lineHeight: 26 },
   stepLabelSmall: { fontSize: 15, lineHeight: 18 },
   amount: { fontFamily: fonts.display, fontSize: 24, color: colors.text, minWidth: 34, textAlign: "center" },
-  allIn: { color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

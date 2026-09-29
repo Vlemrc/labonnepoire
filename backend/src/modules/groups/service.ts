@@ -7,8 +7,9 @@ import { HttpError } from "../../middleware/error.js";
 
 const groupInclude = {
   members: { include: { user: true }, orderBy: { joinedAt: "asc" } },
+  // La partie la plus recente, qu'elle soit en cours ou terminee : le salon
+  // doit pouvoir rouvrir le classement de la derniere partie jouee.
   sessions: {
-    where: { status: { in: ["LOBBY", "IN_PROGRESS"] } },
     orderBy: { createdAt: "desc" },
     take: 1,
   },
@@ -117,4 +118,17 @@ export async function listGroupsForUser(userId: string) {
     orderBy: { joinedAt: "desc" },
   });
   return memberships.map((m) => m.group);
+}
+
+/**
+ * Supprime le salon et tout ce qui en depend (parties, cartes jouees, mises),
+ * par cascade. Autorise meme en pleine partie : c'est a l'hote de prevenir les
+ * autres, l'app le lui rappelle avant de confirmer.
+ */
+export async function deleteGroup(groupId: string, userId: string) {
+  const group = await loadGroup(groupId);
+  if (group.ownerId !== userId) {
+    throw new HttpError(403, "NOT_OWNER", "Seul le créateur du salon peut le supprimer.");
+  }
+  await prisma.group.delete({ where: { id: groupId } });
 }

@@ -279,10 +279,13 @@ export async function openNextCardIfReady(sessionId: string, manche: number) {
     for (const participant of round.participants) {
       if (participant.role !== "BETTOR") continue;
       const player = round.session.players.find((p) => p.userId === participant.userId);
+      // Le capital entier : on avance de carte en carte avec ce qu'il reste.
+      const budget = Math.max(0, player?.points ?? 0);
       await tx.roundParticipant.update({
         where: { id: participant.id },
-        // Le capital entier : on avance de carte en carte avec ce qu'il reste.
-        data: { budget: Math.max(0, player?.points ?? 0) },
+        // Un joueur a sec ne peut plus miser : sans ce passe-droit, la carte
+        // l'attendrait jusqu'a l'echeance et bloquerait toute la manche.
+        data: { budget, ...(budget === 0 ? { hasSubmitted: true } : {}) },
       });
     }
     await tx.round.update({
@@ -423,26 +426,27 @@ export async function resolveRoundAndScore(roundId: string) {
     })),
   );
 
+  const now = new Date();
   await prisma.$transaction(async (tx) => {
     for (const player of round.session.players) {
       const after = outcome.pointsAfter[player.userId] ?? player.points;
       await tx.sessionPlayer.update({
         where: { id: player.id },
-        data: { points: after, isEliminated: player.isEliminated || after <= 0 },
+        data: { points: after, ...eliminationUpdate(player.isEliminated, after, now, round) },
       });
     }
     await tx.round.update({
       where: { id: roundId },
       data: {
         status: "RESOLVED",
-        resolvedAt: new Date(),
+        resolvedAt: now,
         result: { deltas: outcome.deltas, pointsAfter: outcome.pointsAfter },
       },
     });
     if (sessionOutcome.isFinished) {
       await tx.gameSession.update({
         where: { id: round.sessionId },
-        data: { status: "FINISHED", finishedAt: new Date(), winnerId: sessionOutcome.winnerId },
+        data: { status: "FINISHED", finishedAt: now, winnerId: sessionOutcome.winnerId },
       });
     }
   });
@@ -461,6 +465,26 @@ async function finishSession(sessionId: string, winnerId: string | null) {
     where: { id: sessionId },
     data: { status: "FINISHED", finishedAt: new Date(), winnerId },
   });
+}
+
+/**
+ * Champs a ecrire pour un joueur apres une carte. On ne date l'elimination
+ * qu'au moment ou elle survient : les joueurs tombes sur une meme carte
+ * partagent le meme instant, et donc le meme rang sur l'ecran de fin.
+ */
+export function eliminationUpdate(
+  wasEliminated: boolean,
+  pointsAfter: number,
+  now: Date,
+  round: { manche: number; number: number },
+) {
+  if (wasEliminated || pointsAfter > 0) return {};
+  return {
+    isEliminated: true,
+    eliminatedAt: now,
+    eliminatedManche: round.manche,
+    eliminatedCard: round.number,
+  };
 }
 
 function addHours(date: Date, hours: number): Date {

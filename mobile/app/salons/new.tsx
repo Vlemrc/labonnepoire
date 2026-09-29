@@ -91,7 +91,7 @@ export default function NewSalon() {
                 <Text style={[s.themeLabel, active && s.themeLabelActive]}>
                   {THEME_LABELS[t.theme] ?? t.theme}
                 </Text>
-                <Text style={s.themeCount}>{t.cardCount}</Text>
+                <Text style={[s.themeCount, active && s.themeCountActive]}>{t.cardCount}</Text>
               </Pressable>
             );
           })}
@@ -99,9 +99,14 @@ export default function NewSalon() {
         {/* Une carte n'est servie qu'une fois par salon : le nombre de cartes
             cochees determine directement le nombre de soirees jouables. */}
         <Body muted>
-          {totalCards === 0
-            ? "Coche au moins une thematique."
-            : `${totalCards} cartes disponibles. Une carte n'est jamais rejouee dans ce salon, alors coche large.`}
+          {totalCards === 0 ? (
+            "Coche au moins une thématique."
+          ) : (
+            <>
+              <Text style={s.strong}>{totalCards} cartes disponibles.</Text> Une carte n'est
+              jamais rejouée dans ce salon, alors coche large.
+            </>
+          )}
         </Body>
       </View>
 
@@ -133,10 +138,13 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  themeActive: { borderColor: colors.secondary, backgroundColor: colors.surfaceHigh },
+  // Couleurs inversees : le blanc marque la selection, comme ailleurs dans l'app.
+  themeActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   themeLabel: { fontFamily: fonts.bodySemi, color: colors.textMuted },
-  themeLabelActive: { color: colors.text },
+  themeLabelActive: { color: colors.primaryText },
   themeCount: { color: colors.textMuted, fontSize: 12 },
+  themeCountActive: { color: colors.primaryText, opacity: 0.6 },
+  strong: { fontFamily: fonts.bodyBold, color: colors.text },
   row: { flexDirection: "row", gap: spacing.md },
   error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

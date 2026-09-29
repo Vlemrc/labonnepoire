@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../src/lib/prisma.js";
 import { app, as, resetDatabase, signUp, type TestPlayer } from "./helpers/api.js";
 import request from "supertest";
+import { rankPlayers } from "@poire/shared";
 
 const THEMES = ["animaux", "histoire", "insolite", "mots-et-langues", "lois-et-traditions"];
 
@@ -279,6 +280,54 @@ describe("etancheite de l'API", () => {
     expect(JSON.stringify(other.body)).not.toContain('"bettor"');
   });
 
+  it("montre la question aux parieurs une fois les mises ouvertes, pas avant", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session;
+    const other = mine.mancheCards.find((c: { bluffeur: { id: string } }) => c.bluffeur.id !== players[0]!.id);
+    const early = await as(players[0]!).get(`/rounds/${other.roundId}`).expect(200);
+    expect(early.body.round.question).toBeNull();
+
+    await writeAll(players, session.id);
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
+    const view = await as(bettor).get(`/rounds/${round.id}`).expect(200);
+    expect(view.body.round.question).toEqual(expect.any(String));
+    expect(view.body.round.card).toBeNull();
+  });
+
+  it("montre les mises en direct au seul auteur de la carte", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    // En bluff total il n'y a pas de vraie reponse a designer.
+    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { mode: "STANDARD" } });
+    await writeAll(players, session.id);
+
+    const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const { bluffeur, bettors } = splitRoles(players, round.bluffeur.id);
+    await betAll(bettors[0]!, round.id);
+
+    const live = (await as(bluffeur).get(`/rounds/${round.id}`).expect(200)).body.round.liveBets;
+    expect(live.trueAnswerId).toEqual(expect.any(String));
+    expect(live.bets).toHaveLength(1);
+    expect(live.bets[0].bettor.id).toBe(bettors[0]!.id);
+
+    const peek = await as(bettors[1]!).get(`/rounds/${round.id}`).expect(200);
+    expect(peek.body.round.liveBets).toBeNull();
+  });
+
+  it("indique qui n'a pas encore ecrit dans la manche", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    await writeAll([players[0]!], session.id);
+
+    const cards = (await as(players[1]!).get(`/sessions/${session.id}`)).body.session.mancheCards;
+    const writing = cards.filter((c: { status: string }) => c.status === "WRITING");
+    expect(writing.map((c: { bluffeur: { id: string } }) => c.bluffeur.id).sort()).toEqual(
+      [players[1]!.id, players[2]!.id].sort(),
+    );
+  });
+
   it("refuse l'acces a un joueur exterieur a la partie", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
     await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
@@ -412,6 +461,62 @@ describe("cas limites", () => {
     expect(after.body.session.cardsTotal).toBe(2);
   });
 
+  it("date chaque elimination, pour classer les perdants du dernier au premier", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[2]!).post(`/sessions/${session.id}/quit`).expect(200);
+    await new Promise((r) => setTimeout(r, 5));
+    await as(players[1]!).post(`/sessions/${session.id}/quit`).expect(200);
+
+    const view = (await as(players[0]!).get(`/sessions/${session.id}`).expect(200)).body.session;
+    expect(view.status).toBe("FINISHED");
+    const ranking = rankPlayers(view.players, view.winnerId).map((r) => [r.player.pseudo, r.rank]);
+    expect(ranking).toEqual([
+      ["Ana", 1],
+      ["Bruno", 2],
+      ["Cleo", 3],
+    ]);
+  });
+
+  it("ne fait pas attendre les cartes suivantes sur un joueur a sec", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo", "Dora"], {
+      allowNoneOption: false,
+    });
+    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
+    // Pas de bluff total : miser sur la vraie reponse doit toujours etre sans risque.
+    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { mode: "STANDARD" } });
+    await writeAll(players, session.id);
+
+    // Premiere carte : un parieur mise tout sur un mensonge et tombe a zero.
+    const first = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+    const { bettors } = splitRoles(players, first.bluffeur.id);
+    const [broke, ...others] = bettors as [TestPlayer, ...TestPlayer[]];
+    const card = await prisma.card.findFirstOrThrow({ where: { rounds: { some: { id: first.id } } } });
+    const view = (await as(broke).get(`/rounds/${first.id}`)).body.round;
+    const lie = view.answers.find((a: { text: string }) => a.text !== card.trueAnswer)!;
+    await as(broke)
+      .post(`/rounds/${first.id}/bets`)
+      .send({ bets: [{ answerId: lie.id, amount: view.myBudget }] })
+      .expect(201);
+    for (const p of others) await betOnTruth(p, first.id);
+
+    // Son elimination est datee de la carte fatale, pour l'ecran de fin.
+    const players_ = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.players;
+    const out = players_.find((p: { userId: string }) => p.userId === broke.id);
+    expect(out.eliminatedManche).toBe(1);
+    expect(out.eliminatedCard).toBe(first.number);
+
+    // Les cartes suivantes se resolvent sans lui.
+    for (let i = 0; i < 3; i++) {
+      const current = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
+      expect(current.status).toBe("BETTING");
+      const seat = current.participants.find((p: { user: { id: string } }) => p.user.id === broke.id);
+      if (seat.role === "BETTOR") expect(seat.hasSubmitted).toBe(true);
+      for (const p of players) if (p.id !== broke.id) await betOnTruth(p, current.id);
+      const done = await as(players[0]!).get(`/rounds/${current.id}`).expect(200);
+      expect(done.body.round.status).toBe("RESOLVED");
+    }
+  });
+
   it("termine la partie quand il ne reste qu'un joueur", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno"]);
     await as(players[1]!).post(`/sessions/${session.id}/quit`).expect(200);
@@ -433,6 +538,26 @@ describe("cas limites", () => {
     const { players, group } = await setupSession(["Ana", "Bruno"]);
     const res = await as(players[1]!).post("/groups/join").send({ code: group.code }).expect(200);
     expect(res.body.group.members).toHaveLength(2);
+  });
+});
+
+describe("suppression du salon", () => {
+  it("laisse le createur supprimer le salon, meme en pleine partie", async () => {
+    const { players, owner, group, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(owner).post(`/sessions/${session.id}/manches`).expect(201);
+
+    await as(owner).delete(`/groups/${group.id}`).expect(204);
+
+    await as(owner).get(`/groups/${group.id}`).expect(403);
+    const list = await as(players[1]!).get("/groups").expect(200);
+    expect(list.body.groups).toHaveLength(0);
+    expect(await prisma.round.count({ where: { sessionId: session.id } })).toBe(0);
+  });
+
+  it("refuse la suppression a un simple membre", async () => {
+    const { players, group } = await setupSession(["Ana", "Bruno"]);
+    const r = await as(players[1]!).delete(`/groups/${group.id}`).expect(403);
+    expect(r.body.error.code).toBe("NOT_OWNER");
   });
 });
 

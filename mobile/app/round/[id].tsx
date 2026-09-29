@@ -1,11 +1,13 @@
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import type { RoundView } from "@poire/shared";
+import type { RoundView, SessionView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useActivateTwist, useRound, useSession } from "../../src/api/hooks";
 import { BluffScreen } from "../../src/screens/BluffScreen";
 import { BetScreen } from "../../src/screens/BetScreen";
 import { ResultScreen } from "../../src/screens/ResultScreen";
+import { LiveBetsScreen } from "../../src/screens/LiveBetsScreen";
 import {
   Avatar,
   Body,
@@ -33,7 +35,22 @@ import { colors, fonts, spacing } from "../../src/theme";
 export default function Round() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const router = useRouter();
   const round = useRound(id);
+  const session = useSession(round.data?.sessionId);
+
+  // Une fois ses mensonges ecrits, on attend sur sa propre carte. Des que tout
+  // le monde a ecrit, une carte s'ouvre aux mises : on y bascule tout seul,
+  // plutot que de laisser le joueur sur un ecran d'attente perime.
+  const r0 = round.data;
+  const playing = session.data?.currentRound;
+  const waitingHere =
+    r0 !== undefined &&
+    (r0.status === "PENDING" || (r0.status === "WRITING" && !isMyTurnToWrite(r0, user?.id)));
+  const nextId = waitingHere && playing?.status === "BETTING" && playing.id !== r0.id ? playing.id : null;
+  useEffect(() => {
+    if (nextId) router.replace(`/round/${nextId}`);
+  }, [nextId, router]);
 
   if (round.isPending) return <Loading />;
   if (round.error) return <ErrorView error={round.error} onRetry={() => void round.refetch()} />;
@@ -45,7 +62,11 @@ export default function Round() {
 
   if (r.status === "RESOLVED") return <ResultScreen round={r} />;
 
-  if (r.status === "PENDING") {
+  if (nextId) return <Loading />;
+
+  const stillWriting = session.data?.mancheCards.some((c) => c.status === "WRITING") ?? false;
+
+  if (r.status === "PENDING" && !stillWriting) {
     return (
       <Waiting
         round={r}
@@ -55,18 +76,27 @@ export default function Round() {
     );
   }
 
-  if (r.status === "WRITING") {
-    if (r.myRole === "BLUFFEUR" && !me?.hasSubmitted) return <BluffScreen round={r} />;
-    // Tout le monde ecrit en meme temps : si l'on est ici, c'est qu'on a fini
-    // et qu'il reste des joueurs a la traine.
+  if (r.status === "WRITING" || r.status === "PENDING") {
+    if (isMyTurnToWrite(r, user?.id)) return <BluffScreen round={r} />;
+    // Tout le monde ecrit en meme temps : si l'on est ici, il reste des joueurs
+    // a la traine. Ce round n'est pas forcement le notre (c'est celui d'un
+    // retardataire), on ne peut donc affirmer « tes mensonges sont prets » que
+    // si c'est bien notre carte.
     return (
       <Waiting
         round={r}
         title="En attente des autres"
-        subtitle="Tes mensonges sont prets. La manche demarre quand tout le monde aura ecrit."
+        subtitle={
+          r.myRole === "BLUFFEUR"
+            ? "Tes mensonges sont prêts. La manche démarre quand tout le monde aura écrit."
+            : "D'autres joueurs écrivent encore. La manche démarre quand tout le monde aura écrit."
+        }
+        writers={session.data}
       />
     );
   }
+
+  if (r.myRole === "BLUFFEUR") return <LiveBetsScreen round={r} />;
 
   // BETTING
   if (r.myRole === "BETTOR" && !me?.hasSubmitted) {
@@ -77,11 +107,20 @@ export default function Round() {
       round={r}
       title="Mises en cours"
       subtitle={
-        r.myRole === "BLUFFEUR"
-          ? "Tes reponses sont parties. On attend les paris."
-          : "Tes mises sont enregistrees, secretes jusqu'au bout."
+        // A sec, on est marque « a mise » d'office : on regarde la carte passer.
+        r.myBudget === 0 && !r.myBets
+          ? "Tu n'as plus de jetons : cette carte se joue sans toi."
+          : "Tes mises sont enregistrées, secrètes jusqu'au bout."
       }
     />
+  );
+}
+
+function isMyTurnToWrite(round: RoundView, userId: string | undefined) {
+  return (
+    round.status === "WRITING" &&
+    round.myRole === "BLUFFEUR" &&
+    !round.participants.find((p) => p.user.id === userId)?.hasSubmitted
   );
 }
 
@@ -146,7 +185,18 @@ function Cancelled({ round }: { round: RoundView }) {
   );
 }
 
-function Waiting({ round, title, subtitle }: { round: RoundView; title: string; subtitle: string }) {
+function Waiting({
+  round,
+  title,
+  subtitle,
+  writers,
+}: {
+  round: RoundView;
+  title: string;
+  subtitle: string;
+  /** Pendant l'ecriture : la manche entiere, pour montrer qui a deja ecrit. */
+  writers?: SessionView;
+}) {
   const twist = useActivateTwist(round.id);
   const pending = round.participants.filter((p) => !p.hasSubmitted);
   const canTwist = round.status === "WRITING" && !round.twist;
@@ -169,6 +219,21 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
         </Card>
       ) : null}
 
+      {writers ? (
+        <Card>
+          <Heading>Qui a écrit</Heading>
+          {writers.mancheCards.map((c) => {
+            const done = c.status !== "WRITING";
+            return (
+              <View key={c.roundId} style={s.row}>
+                <Avatar avatar={c.bluffeur.avatar} size={32} />
+                <Text style={s.name}>{c.bluffeur.pseudo}</Text>
+                <Pill text={done ? "Prêt" : "Écrit…"} tone={done ? "good" : "muted"} />
+              </View>
+            );
+          })}
+        </Card>
+      ) : (
       <Card>
         <Heading>On attend</Heading>
         {pending.length === 0 ? (
@@ -183,6 +248,7 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
           ))
         )}
       </Card>
+      )}
 
       {canTwist ? (
         <>
@@ -201,7 +267,8 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
 }
 
 const s = StyleSheet.create({
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
+  // Le delai passe sous le titre : a cote, un titre long le poussait hors de l'ecran.
+  titleRow: { alignItems: "flex-start", gap: spacing.xs },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },
   bigDelta: { fontFamily: fonts.display, fontSize: 44 },

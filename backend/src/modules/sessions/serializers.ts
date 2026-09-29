@@ -1,6 +1,7 @@
 import type { AvatarId, SessionView } from "@poire/shared";
 import { DEFAULT_AVATAR } from "@poire/shared";
 import { toRoundView } from "../rounds/serializers.js";
+import { toPublicUser } from "../users/serializers.js";
 import type { RoundWithRelations } from "../rounds/service.js";
 import type { SessionWithRelations } from "./service.js";
 
@@ -31,6 +32,9 @@ export function toSessionView(session: SessionWithRelations, viewerId: string): 
       avatar: (p.user.avatar as AvatarId) ?? DEFAULT_AVATAR,
       points: p.points,
       isEliminated: p.isEliminated,
+      eliminatedAt: p.eliminatedAt?.toISOString() ?? null,
+      eliminatedManche: p.eliminatedManche,
+      eliminatedCard: p.eliminatedCard,
       turnOrder: p.turnOrder,
       twistCardUsed: p.twistCardUsed,
     })),
@@ -38,6 +42,12 @@ export function toSessionView(session: SessionWithRelations, viewerId: string): 
     // Nombre de cartes encore a jouer dans la manche, cette carte comprise.
     cardsLeft: rounds.filter((r) => r.status !== "RESOLVED" && r.status !== "CANCELLED").length,
     cardsTotal: rounds.length,
+    mancheCards: rounds.map((r) => ({
+      roundId: r.id,
+      number: r.number,
+      status: r.status,
+      bluffeur: toPublicUser(r.bluffeur),
+    })),
     currentRound: current
       ? toRoundView(
           // La requete session charge le round avec les memes relations, mais

@@ -72,8 +72,8 @@ export function BluffScreen({ round }: { round: RoundView }) {
         </Card>
       ) : (
         <Body muted>
-          Invente {expected} reponses credibles. Chaque point mise dessus par un
-          adversaire tombe dans ta poche.
+          Invente {expected} réponses crédibles. Tu touches une part de ce que
+          les adversaires y perdent : le total divisé par le nombre de parieurs.
         </Body>
       )}
 

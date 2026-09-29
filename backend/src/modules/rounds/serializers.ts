@@ -59,6 +59,19 @@ export function toRoundView(round: RoundWithRelations, viewerId: string): RoundV
             theme: round.card.theme,
           }
         : null,
+    question: isBluffeur || answersVisible ? round.card.question : null,
+    liveBets:
+      isBluffeur && round.status === "BETTING"
+        ? {
+            trueAnswerId: round.answers.find((a) => a.isTrue)?.id ?? null,
+            bets: round.bets.map((b) => ({
+              bettor: toPublicUser(b.bettor),
+              answerId: b.answerId,
+              isNoneOption: b.isNoneOption,
+              amount: b.amount,
+            })),
+          }
+        : null,
     answers: answersVisible
       ? round.answers.map((a) => ({ id: a.id, text: a.text, position: a.position }))
       : null,

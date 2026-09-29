@@ -3,6 +3,7 @@ import { toPublicUser } from "../users/serializers.js";
 import type { GroupWithMembers } from "./service.js";
 
 export function toGroupSummary(group: GroupWithMembers): GroupSummary {
+  const latest = group.sessions[0];
   return {
     id: group.id,
     code: group.code,
@@ -14,6 +15,8 @@ export function toGroupSummary(group: GroupWithMembers): GroupSummary {
     twistsEnabled: group.twistsEnabled,
     roundDurationHours: group.roundDurationHours,
     members: group.members.map((m) => toPublicUser(m.user)),
-    activeSessionId: group.sessions[0]?.id ?? null,
+    activeSessionId:
+      latest && (latest.status === "LOBBY" || latest.status === "IN_PROGRESS") ? latest.id : null,
+    lastFinishedSessionId: latest?.status === "FINISHED" ? latest.id : null,
   };
 }

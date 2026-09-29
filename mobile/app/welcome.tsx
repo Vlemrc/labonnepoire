@@ -18,6 +18,7 @@ export default function Welcome() {
 
   return (
     <Screen
+      headerless
       footer={
         <>
           <Button label="Créer un salon" onPress={() => router.push("/salons/new")} />

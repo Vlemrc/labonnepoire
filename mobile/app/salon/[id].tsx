@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import type { PublicUser, RoundView, SessionView } from "@poire/shared";
 import { Appear } from "../../src/components/Appear";
 import { useAuth } from "../../src/auth/AuthContext";
 import { shareInviteCode } from "../../src/lib/share";
-import { useGroup, useSession, useStartManche, useStartSession } from "../../src/api/hooks";
+import {
+  useDeleteGroup,
+  useGroup,
+  useSession,
+  useStartManche,
+  useStartSession,
+} from "../../src/api/hooks";
 import {
   Avatar,
   Body,
@@ -29,6 +35,7 @@ export default function Salon() {
   const session = useSession(group.data?.activeSessionId ?? undefined);
   const startSession = useStartSession();
   const startManche = useStartManche();
+  const deleteGroup = useDeleteGroup();
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   if (group.isPending) return <Loading />;
@@ -74,22 +81,91 @@ export default function Salon() {
           <RoundCard round={round} cardsTotal={s?.cardsTotal ?? 0} />
         </Appear>
       ) : null}
+
+      {/* Une partie terminee n'est plus « active » : sans ce rappel, le salon
+          revient au lobby et le vainqueur n'est plus affiche nulle part. */}
+      {!s && g.lastFinishedSessionId ? (
+        <Appear index={1}>
+          <Button
+            label="Voir le dernier classement"
+            variant="ghost"
+            onPress={() => router.push(`/classement/${g.lastFinishedSessionId}`)}
+          />
+        </Appear>
+      ) : null}
+
+      {isOwner ? (
+        <>
+          {deleteGroup.error ? (
+            <Text style={st.error}>{(deleteGroup.error as Error).message}</Text>
+          ) : null}
+          <Button
+            label="Supprimer le salon"
+            variant="danger"
+            onPress={confirmDelete}
+            loading={deleteGroup.isPending}
+          />
+        </>
+      ) : null}
     </Screen>
   );
+
+  /**
+   * Distribue une manche puis ouvre directement notre carte : lancer, c'est
+   * pour ecrire, pas pour revenir sur un salon qui attend un second bouton.
+   * Les erreurs s'affichent via l'etat des mutations, d'ou le catch muet.
+   */
+  async function launchManche(sessionId: string) {
+    try {
+      const { session: next } = await startManche.mutateAsync(sessionId);
+      if (next.currentRound) router.push(`/round/${next.currentRound.id}`);
+    } catch {}
+  }
+
+  async function launchGame() {
+    try {
+      const { session: next } = await startSession.mutateAsync(g.id);
+      await launchManche(next.id);
+    } catch {}
+  }
+
+  const launching = startSession.isPending || startManche.isPending;
+  const launchError = (startSession.error ?? startManche.error) as Error | null;
+
+  function confirmDelete() {
+    const playing = s && s.status !== "FINISHED";
+    Alert.alert(
+      "Supprimer le salon ?",
+      playing
+        ? "La partie en cours sera perdue pour tout le monde. Pense à prévenir les autres joueurs."
+        : "Le salon et son historique disparaîtront pour tous les joueurs.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () =>
+            // Retour arriere plutot que replace : le salon est ouvert depuis la
+            // liste, la remplacer empilerait une seconde liste avec un chevron.
+            deleteGroup.mutate(g.id, {
+              onSuccess: () => (router.canGoBack() ? router.back() : router.replace("/salons")),
+            }),
+        },
+      ],
+    );
+  }
 
   function Footer() {
     if (!s) {
       if (!isOwner) return <Body muted>En attente que l'hôte lance la partie.</Body>;
       return (
         <>
-          {startSession.error ? (
-            <Text style={st.error}>{(startSession.error as Error).message}</Text>
-          ) : null}
+          {launchError ? <Text style={st.error}>{launchError.message}</Text> : null}
           <Button
             label="Lancer la partie"
-            onPress={() => void startSession.mutateAsync(g.id)}
-            disabled={g.members.length < 2 || startSession.isPending}
-            loading={startSession.isPending}
+            onPress={() => void launchGame()}
+            disabled={g.members.length < 2 || launching}
+            loading={launching}
           />
           {g.members.length < 2 ? <Body muted>Il faut au moins 2 joueurs.</Body> : null}
         </>
@@ -100,24 +176,31 @@ export default function Salon() {
       const winner = s.players.find((p) => p.userId === s.winnerId);
       return (
         <>
-          <Body>{winner ? `${winner.pseudo} remporte la partie.` : "Partie terminee."}</Body>
+          <Body>{winner ? `${winner.pseudo} remporte la partie.` : "Partie terminée."}</Body>
+          {launchError ? <Text style={st.error}>{launchError.message}</Text> : null}
           {isOwner ? (
-            <Button
-              label="Nouvelle partie"
-              onPress={() => void startSession.mutateAsync(g.id)}
-              loading={startSession.isPending}
-            />
+            <Button label="Nouvelle partie" onPress={() => void launchGame()} loading={launching} />
           ) : null}
         </>
       );
     }
 
     if (roundOpen && round) {
+      // Pendant l'ecriture, la carte affichee n'est la notre que s'il nous
+      // reste a l'ecrire : une fois nos mensonges envoyes, c'est celle d'un
+      // retardataire, et promettre « Ecrire » menerait a un ecran d'attente.
+      const toWrite =
+        round.myRole === "BLUFFEUR" &&
+        !round.participants.find((p) => p.user.id === user?.id)?.hasSubmitted;
       const label =
         round.status === "WRITING"
-          ? "Ecrire mes mensonges"
+          ? toWrite
+            ? "Écrire mes mensonges"
+            : "Voir qui écrit encore"
           : round.status === "BETTING"
-            ? "Miser"
+            ? round.myRole === "BLUFFEUR"
+              ? "Suivre les mises"
+              : "Miser"
             : "Ouvrir la carte";
       return <Button label={label} onPress={() => router.push(`/round/${round.id}`)} />;
     }
@@ -128,8 +211,8 @@ export default function Salon() {
           <Text style={st.error}>{(startManche.error as Error).message}</Text>
         ) : null}
         <Button
-          label={s.manche > 0 ? "Manche suivante" : "Lancer la premiere manche"}
-          onPress={() => void startManche.mutateAsync(s.id)}
+          label={s.manche > 0 ? "Manche suivante" : "Lancer la première manche"}
+          onPress={() => void launchManche(s.id)}
           loading={startManche.isPending}
         />
       </>

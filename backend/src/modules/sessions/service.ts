@@ -95,7 +95,12 @@ export async function quitSession(sessionId: string, userId: string) {
   if (session.status === "FINISHED") return session;
   await prisma.sessionPlayer.update({
     where: { sessionId_userId: { sessionId, userId } },
-    data: { isEliminated: true, points: 0 },
+    data: {
+      isEliminated: true,
+      points: 0,
+      eliminatedAt: new Date(),
+      eliminatedManche: session.currentRoundNumber,
+    },
   });
 
   const remaining = await prisma.sessionPlayer.findMany({
