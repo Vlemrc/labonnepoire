@@ -24,7 +24,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
-        message: "Requete invalide.",
+        message: "Requête invalide.",
         details: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
       },
     });
@@ -39,7 +39,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-    res.status(409).json({ error: { code: "CONFLICT", message: "Cette ressource existe deja." } });
+    res.status(409).json({ error: { code: "CONFLICT", message: "Cette ressource existe déjà." } });
     return;
   }
 

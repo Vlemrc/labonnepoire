@@ -28,7 +28,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
         />
       }
     >
-      <Title>Resultats</Title>
+      <Title>Résultats</Title>
       <Body muted>{result.question}</Body>
 
       {myDelta ? (
@@ -56,8 +56,8 @@ export function ResultScreen({ round }: { round: RoundView }) {
 
       {fullBluff ? (
         <Card style={{ borderColor: colors.secondary }}>
-          <Pill text="Round special" tone="secondary" />
-          <Body>Aucune de ces reponses n'etait vraie. Seul « aucune de ces reponses » rapportait.</Body>
+          <Pill text="Round spécial" tone="secondary" />
+          <Body>Aucune de ces réponses n'était vraie. Seul « aucune de ces réponses » rapportait.</Body>
         </Card>
       ) : null}
 
@@ -74,7 +74,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
               <Body muted>Menti par {answer.author.pseudo}</Body>
             </View>
           ) : (
-            <Body muted>Reponse de la carte</Body>
+            <Body muted>Réponse de la carte</Body>
           )}
           {answer.betsReceived.length > 0 ? (
             <View style={s.bets}>
@@ -86,7 +86,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
               ))}
             </View>
           ) : (
-            <Body muted>Personne n'a mise dessus.</Body>
+            <Body muted>Personne n'a misé dessus.</Body>
           )}
         </Card>
         </Appear>
@@ -117,7 +117,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
       {/* La relecture du contenu par les joueurs est le seul mecanisme qui
           passe a l'echelle : toutes les cartes sont en statut non verifie. */}
       <Button
-        label={reported ? "Carte signalee" : "Signaler cette carte"}
+        label={reported ? "Carte signalée" : "Signaler cette carte"}
         variant="ghost"
         disabled={reported || report.isPending}
         onPress={async () => {

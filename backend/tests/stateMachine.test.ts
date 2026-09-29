@@ -49,13 +49,13 @@ describe("validateFakeAnswers", () => {
 
   it("refuse les doublons a la casse et aux accents pres", () => {
     expect(() => validateFakeAnswers(["Éléphant", "elephant"], "STANDARD", "Girafe")).toThrow(
-      /differentes/,
+      /différentes/,
     );
   });
 
   it("refuse une fausse reponse identique a la vraie", () => {
     expect(() => validateFakeAnswers(["  la TOUR eiffel", "Autre"], "STANDARD", "La Tour Eiffel"))
-      .toThrow(/identique a la vraie/);
+      .toThrow(/identique à la vraie/);
   });
 
   it("refuse une reponse vide", () => {
@@ -126,7 +126,7 @@ describe("validateBetDistribution", () => {
       modifiers: { ...NEUTRAL_MODIFIERS, requireSingleAnswerBet: true },
     };
     expect(() => validateBetDistribution([line("a1", 5), line("a2", 5)], 10, ids, allIn)).toThrow(
-      /une seule reponse/,
+      /une seule réponse/,
     );
     expect(validateBetDistribution([line("a1", 10)], 10, ids, allIn)).toHaveLength(1);
   });

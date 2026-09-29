@@ -66,8 +66,8 @@ export default function Profile() {
   if (!pending) {
     return (
       <Screen footer={<Button label="Retour" onPress={() => router.replace("/welcome")} />}>
-        <Title>Reprenons du debut</Title>
-        <Body muted>Choisis d'abord un salon a creer ou a rejoindre.</Body>
+        <Title>Reprenons du début</Title>
+        <Body muted>Choisis d'abord un salon à créer ou à rejoindre.</Body>
       </Screen>
     );
   }
@@ -78,7 +78,7 @@ export default function Profile() {
         <>
           {error ? <Text style={s.error}>{error}</Text> : null}
           <Button
-            label={pending.kind === "create" ? "Creer le salon" : "Rejoindre le salon"}
+            label={pending.kind === "create" ? "Créer le salon" : "Rejoindre le salon"}
             onPress={submit}
             disabled={!canSubmit}
             loading={submitting}
@@ -89,8 +89,8 @@ export default function Profile() {
       <Title>Qui es-tu ?</Title>
       <Body muted>
         {pending.kind === "create"
-          ? `Encore une etape avant d'ouvrir « ${pending.name} ».`
-          : `Encore une etape avant de rejoindre le salon ${pending.code}.`}
+          ? `Encore une étape avant d'ouvrir « ${pending.name} ».`
+          : `Encore une étape avant de rejoindre le salon ${pending.code}.`}
       </Body>
 
       <View style={s.preview}>

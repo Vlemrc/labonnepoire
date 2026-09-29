@@ -42,11 +42,11 @@ export function BluffScreen({ round }: { round: RoundView }) {
       }
     >
       <View style={s.header}>
-        <Title>A toi de mentir</Title>
+        <Title>À toi de mentir</Title>
         <Deadline deadlineAt={round.deadlineAt} />
       </View>
       <Body muted>
-        Tout le monde ecrit en meme temps. Passe le delai, ta carte est annulee
+        Tout le monde écrit en même temps. Passé le délai, ta carte est annulée
         et tu perds des points au profit des autres.
       </Body>
 
@@ -55,7 +55,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
         <Label>La question</Label>
         <Heading>{round.card?.question}</Heading>
         <View style={s.truth}>
-          <Label>La vraie reponse</Label>
+          <Label>La vraie réponse</Label>
           <Text style={s.truthText}>{round.card?.trueAnswer}</Text>
         </View>
       </Card>
@@ -63,10 +63,10 @@ export function BluffScreen({ round }: { round: RoundView }) {
 
       {fullBluff ? (
         <Card style={{ borderColor: colors.secondary }}>
-          <Pill text="Round special" tone="secondary" />
+          <Pill text="Round spécial" tone="secondary" />
           <Body>
-            La vraie reponse ne sera pas proposee. Ecris trois mensonges : seuls
-            les parieurs qui repondent « aucune de ces reponses » gagneront.
+            La vraie réponse ne sera pas proposée. Écris trois mensonges : seuls
+            les parieurs qui répondent « aucune de ces réponses » gagneront.
           </Body>
           <Body muted>Ils l'ignorent totalement. Ne te trahis pas.</Body>
         </Card>
@@ -85,7 +85,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
           onChangeText={(text) =>
             setTyped(answers.map((a, i) => (i === index ? text : a)))
           }
-          placeholder="Une reponse plausible…"
+          placeholder="Une réponse plausible…"
           maxLength={200}
         />
         </Appear>

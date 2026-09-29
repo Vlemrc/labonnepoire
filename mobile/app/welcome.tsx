@@ -20,7 +20,7 @@ export default function Welcome() {
     <Screen
       footer={
         <>
-          <Button label="Creer un salon" onPress={() => router.push("/salons/new")} />
+          <Button label="Créer un salon" onPress={() => router.push("/salons/new")} />
           <Button
             label="Rejoindre avec un code"
             variant="ghost"
@@ -76,8 +76,8 @@ export default function Welcome() {
       </View>
 
       <Body muted>
-        Un joueur connait la vraie reponse et invente des mensonges. Les autres
-        repartissent leurs jetons sur ce qui leur semble vrai. Celui qui se fait
+        Un joueur connaît la vraie réponse et invente des mensonges. Les autres
+        répartissent leurs jetons sur ce qui leur semble vrai. Celui qui se fait
         avoir paie.
       </Body>
     </Screen>

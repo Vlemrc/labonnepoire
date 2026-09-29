@@ -19,14 +19,14 @@ export async function reportCard(cardId: string, userId: string, reason?: string
     where: { userId, round: { cardId } },
   });
   if (!played) {
-    throw new HttpError(403, "CARD_NOT_PLAYED", "Tu n'as pas joue cette carte.");
+    throw new HttpError(403, "CARD_NOT_PLAYED", "Tu n'as pas joué cette carte.");
   }
 
   const already = await prisma.cardReport.findUnique({
     where: { cardId_userId: { cardId, userId } },
   });
   if (already) {
-    throw new GameRuleError("ALREADY_REPORTED", "Tu as deja signale cette carte.");
+    throw new GameRuleError("ALREADY_REPORTED", "Tu as déjà signalé cette carte.");
   }
 
   const [, updated] = await prisma.$transaction([

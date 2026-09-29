@@ -18,7 +18,7 @@ export default function Salons() {
     <Screen
       footer={
         <>
-          <Button label="Creer un salon" onPress={() => router.push("/salons/new")} />
+          <Button label="Créer un salon" onPress={() => router.push("/salons/new")} />
           <Button label="Rejoindre avec un code" variant="ghost" onPress={() => router.push("/salons/join")} />
         </>
       }

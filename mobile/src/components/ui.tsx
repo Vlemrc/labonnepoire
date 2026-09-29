@@ -155,7 +155,7 @@ export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => 
       <Text style={[s.body, { color: colors.danger, textAlign: "center" }]}>{message}</Text>
       {onRetry ? (
         <View style={{ marginTop: spacing.md }}>
-          <Button label="Reessayer" variant="ghost" onPress={onRetry} />
+          <Button label="Réessayer" variant="ghost" onPress={onRetry} />
         </View>
       ) : null}
     </View>

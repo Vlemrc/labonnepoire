@@ -9,7 +9,7 @@ export function formatRemaining(deadlineAt: string | null): string | null {
   if (!deadlineAt) return null;
   const ms = new Date(deadlineAt).getTime() - Date.now();
   if (Number.isNaN(ms)) return null;
-  if (ms <= 0) return "Temps ecoule";
+  if (ms <= 0) return "Temps écoulé";
 
   const minutes = Math.floor(ms / 60_000);
   const hours = Math.floor(minutes / 60);

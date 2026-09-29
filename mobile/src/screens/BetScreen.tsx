@@ -36,7 +36,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
   const options = [
     ...(round.answers ?? []).map((a) => ({ key: a.id, text: a.text, isNone: false })),
     ...(round.allowNoneOption
-      ? [{ key: NONE_KEY, text: "Aucune de ces reponses", isNone: true }]
+      ? [{ key: NONE_KEY, text: "Aucune de ces réponses", isNone: true }]
       : []),
   ];
 
@@ -107,7 +107,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
                 </Text>
               </View>
               <View style={{ flex: 1, gap: 2 }}>
-                {option.isNone ? <Label>Pari risque</Label> : null}
+                {option.isNone ? <Label>Pari risqué</Label> : null}
                 <Heading>{option.text}</Heading>
               </View>
             </View>

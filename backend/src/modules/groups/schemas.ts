@@ -7,7 +7,7 @@ import {
 
 export const groupSettingsSchema = z.object({
   startingPoints: z.number().int().min(5).max(200).default(DEFAULT_STARTING_POINTS),
-  themes: z.array(z.string().min(1)).min(1, "Choisis au moins une thematique."),
+  themes: z.array(z.string().min(1)).min(1, "Choisis au moins une thématique."),
   allowNoneOption: z.boolean().default(true),
   twistsEnabled: z.boolean().default(true),
   roundDurationHours: z.number().int().min(1).max(168).default(DEFAULT_ROUND_DURATION_HOURS),
@@ -23,7 +23,7 @@ export const joinGroupSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .length(GROUP_CODE_LENGTH, `Le code fait ${GROUP_CODE_LENGTH} caracteres.`),
+    .length(GROUP_CODE_LENGTH, `Le code fait ${GROUP_CODE_LENGTH} caractères.`),
 });
 
 export const updateSettingsSchema = groupSettingsSchema.partial();

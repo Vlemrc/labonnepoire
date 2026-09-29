@@ -50,7 +50,7 @@ export default function Round() {
       <Waiting
         round={r}
         title="Carte en attente"
-        subtitle="Les cartes se jouent une par une. Celle-ci passera a son tour."
+        subtitle="Les cartes se jouent une par une. Celle-ci passera à son tour."
       />
     );
   }
@@ -105,11 +105,11 @@ function Cancelled({ round }: { round: RoundView }) {
         />
       }
     >
-      <Title>Round annule</Title>
+      <Title>Round annulé</Title>
       <Body muted>
         {timeout
-          ? `${round.bluffeur.pseudo} n'a pas envoye ses reponses a temps. Sa mise de depart est repartie entre vous.`
-          : `${round.bluffeur.pseudo} a quitte la partie.`}
+          ? `${round.bluffeur.pseudo} n'a pas envoyé ses réponses à temps. Sa mise de départ est répartie entre vous.`
+          : `${round.bluffeur.pseudo} a quitté la partie.`}
       </Body>
 
       {mine && mine.delta !== 0 ? (
@@ -164,7 +164,7 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
           <Pill text={`Twist : ${round.twist.label}`} tone="secondary" />
           <Body muted>{round.twist.description}</Body>
           {round.twist.activatedBy ? (
-            <Body muted>Active par {round.twist.activatedBy.pseudo}.</Body>
+            <Body muted>Activé par {round.twist.activatedBy.pseudo}.</Body>
           ) : null}
         </Card>
       ) : null}
@@ -172,13 +172,13 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
       <Card>
         <Heading>On attend</Heading>
         {pending.length === 0 ? (
-          <Body muted>Tout le monde a joue. La resolution arrive.</Body>
+          <Body muted>Tout le monde a joué. La résolution arrive.</Body>
         ) : (
           pending.map((p) => (
             <View key={p.user.id} style={s.row}>
               <Avatar avatar={p.user.avatar} size={32} />
               <Text style={s.name}>{p.user.pseudo}</Text>
-              <Body muted>{p.role === "BLUFFEUR" ? "ecrit" : "mise"}</Body>
+              <Body muted>{p.role === "BLUFFEUR" ? "écrit" : "mise"}</Body>
             </View>
           ))
         )}
@@ -193,7 +193,7 @@ function Waiting({ round, title, subtitle }: { round: RoundView; title: string; 
             onPress={() => void twist.mutateAsync()}
             loading={twist.isPending}
           />
-          <Body muted>Une seule fois par partie. Elle change la regle du round en cours.</Body>
+          <Body muted>Une seule fois par partie. Elle change la règle du round en cours.</Body>
         </>
       ) : null}
     </Screen>

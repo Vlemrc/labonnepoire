@@ -37,7 +37,7 @@ const twistSchema = z.object({ code: z.string().optional() });
 async function assertParticipant(roundId: string, userId: string) {
   const round = await loadRound(roundId);
   if (!round.participants.some((p) => p.userId === userId)) {
-    throw new HttpError(403, "NOT_IN_ROUND", "Tu ne participes pas a ce round.");
+    throw new HttpError(403, "NOT_IN_ROUND", "Tu ne participes pas à ce round.");
   }
   return round;
 }

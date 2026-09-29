@@ -51,9 +51,9 @@ export default function Salon() {
             const outcome = await shareInviteCode(g.code, g.name);
             setShareNote(
               outcome === "copied"
-                ? "Code copie."
+                ? "Code copié."
                 : outcome === "failed"
-                  ? "Partage annule."
+                  ? "Partage annulé."
                   : null,
             );
           }}
@@ -63,7 +63,7 @@ export default function Salon() {
           <Text style={st.codeHint}>Partager</Text>
         </Pressable>
       </View>
-      <Body muted>{shareNote ?? "Appuie sur le code pour l'envoyer a tes amis."}</Body>
+      <Body muted>{shareNote ?? "Appuie sur le code pour l'envoyer à tes amis."}</Body>
 
       <Appear index={0}>
         {s ? <Scoreboard session={s} meId={user?.id} /> : <Lobby group={g} />}
@@ -79,7 +79,7 @@ export default function Salon() {
 
   function Footer() {
     if (!s) {
-      if (!isOwner) return <Body muted>En attente que l'hote lance la partie.</Body>;
+      if (!isOwner) return <Body muted>En attente que l'hôte lance la partie.</Body>;
       return (
         <>
           {startSession.error ? (
@@ -166,7 +166,7 @@ function Scoreboard({ session, meId }: { session: SessionView; meId?: string }) 
             {p.pseudo}
             {p.userId === meId ? " (toi)" : ""}
           </Text>
-          {p.isEliminated ? <Pill text="Elimine" tone="bad" /> : null}
+          {p.isEliminated ? <Pill text="Éliminé" tone="bad" /> : null}
           <Text style={st.points}>{p.points}</Text>
         </View>
       ))}
@@ -179,24 +179,24 @@ function RoundCard({ round, cardsTotal }: { round: RoundView; cardsTotal: number
   // CANCELLED a longtemps ete traite comme un « autre » cas et affichait
   // « Mises » : chaque statut est desormais nomme explicitement.
   const LABELS: Record<RoundView["status"], string> = {
-    WRITING: "Ecriture",
+    WRITING: "Écriture",
     PENDING: "En attente",
     BETTING: "Mises",
-    RESOLVED: "Termine",
-    CANCELLED: "Annule",
+    RESOLVED: "Terminé",
+    CANCELLED: "Annulé",
   };
   const status =
     round.status === "WRITING"
-      ? "Tout le monde ecrit ses mensonges"
+      ? "Tout le monde écrit ses mensonges"
       : round.status === "PENDING"
         ? "Cette carte attend son tour"
         : round.status === "BETTING"
         ? waiting.length === 1
-          ? "1 joueur n'a pas encore mise"
-          : `${waiting.length} joueurs n'ont pas encore mise`
+          ? "1 joueur n'a pas encore misé"
+          : `${waiting.length} joueurs n'ont pas encore misé`
         : round.status === "CANCELLED"
-          ? `Round annule : ${round.bluffeur.pseudo} n'a pas repondu a temps`
-          : "Round termine";
+          ? `Round annulé : ${round.bluffeur.pseudo} n'a pas répondu à temps`
+          : "Round terminé";
 
   return (
     <Card>

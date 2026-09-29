@@ -40,14 +40,14 @@ export function allCardsWritten(statuses: RoundStatus[]): boolean {
 
 export function assertCanSubmitAnswers(round: RoundSnapshot, userId: string): void {
   if (round.status !== "WRITING") {
-    throw new GameRuleError("ROUND_NOT_WRITING", "La phase d'ecriture est terminee.");
+    throw new GameRuleError("ROUND_NOT_WRITING", "La phase d'écriture est terminée.");
   }
   if (round.bluffeurId !== userId) {
-    throw new GameRuleError("NOT_BLUFFEUR", "Seul le bluffeur peut ecrire les reponses.", 403);
+    throw new GameRuleError("NOT_BLUFFEUR", "Seul le bluffeur peut écrire les réponses.", 403);
   }
   const me = round.participants.find((p) => p.userId === userId);
   if (me?.hasSubmitted) {
-    throw new GameRuleError("ALREADY_SUBMITTED", "Tes reponses sont deja enregistrees.");
+    throw new GameRuleError("ALREADY_SUBMITTED", "Tes réponses sont déjà enregistrées.");
   }
 }
 
@@ -67,27 +67,27 @@ export function validateFakeAnswers(
   if (cleaned.length !== expected) {
     throw new GameRuleError(
       "WRONG_ANSWER_COUNT",
-      `Il faut exactement ${expected} fausses reponses.`,
+      `Il faut exactement ${expected} fausses réponses.`,
       400,
     );
   }
   for (const text of cleaned) {
     if (text.length === 0) {
-      throw new GameRuleError("EMPTY_ANSWER", "Une reponse ne peut pas etre vide.", 400);
+      throw new GameRuleError("EMPTY_ANSWER", "Une réponse ne peut pas être vide.", 400);
     }
     if (text.length > 200) {
-      throw new GameRuleError("ANSWER_TOO_LONG", "Une reponse fait au plus 200 caracteres.", 400);
+      throw new GameRuleError("ANSWER_TOO_LONG", "Une réponse fait au plus 200 caractères.", 400);
     }
   }
 
   const normalized = cleaned.map(normalizeAnswer);
   if (new Set(normalized).size !== normalized.length) {
-    throw new GameRuleError("DUPLICATE_ANSWER", "Les fausses reponses doivent etre differentes.", 400);
+    throw new GameRuleError("DUPLICATE_ANSWER", "Les fausses réponses doivent être différentes.", 400);
   }
   if (mode === "STANDARD" && normalized.includes(normalizeAnswer(trueAnswer))) {
     throw new GameRuleError(
       "ANSWER_MATCHES_TRUTH",
-      "Une fausse reponse est identique a la vraie reponse.",
+      "Une fausse réponse est identique à la vraie réponse.",
       400,
     );
   }
@@ -103,10 +103,10 @@ export function assertCanSubmitBets(round: RoundSnapshot, userId: string): void 
     throw new GameRuleError("NOT_BETTOR", "Tu n'es pas parieur sur ce round.", 403);
   }
   if (me.hasSubmitted) {
-    throw new GameRuleError("ALREADY_SUBMITTED", "Tes mises sont deja enregistrees.");
+    throw new GameRuleError("ALREADY_SUBMITTED", "Tes mises sont déjà enregistrées.");
   }
   if (me.budget <= 0) {
-    throw new GameRuleError("NO_BUDGET", "Tu n'as plus de points a miser.");
+    throw new GameRuleError("NO_BUDGET", "Tu n'as plus de points à miser.");
   }
 }
 
@@ -139,30 +139,30 @@ export function validateBetDistribution(
       if (!options.allowNoneOption) {
         throw new GameRuleError(
           "NONE_OPTION_DISABLED",
-          "L'option « aucune de ces reponses » n'est pas active sur ce round.",
+          "L'option « aucune de ces réponses » n'est pas active sur ce round.",
           400,
         );
       }
       if (line.answerId) {
-        throw new GameRuleError("INVALID_BET", "Une mise « aucune » ne vise pas de reponse.", 400);
+        throw new GameRuleError("INVALID_BET", "Une mise « aucune » ne vise pas de réponse.", 400);
       }
       continue;
     }
     if (!line.answerId || !answerIds.includes(line.answerId)) {
-      throw new GameRuleError("UNKNOWN_ANSWER", "Mise sur une reponse inconnue.", 400);
+      throw new GameRuleError("UNKNOWN_ANSWER", "Mise sur une réponse inconnue.", 400);
     }
   }
 
   const targets = positive.map((l) => (l.isNoneOption ? "__NONE__" : l.answerId));
   if (new Set(targets).size !== targets.length) {
-    throw new GameRuleError("DUPLICATE_BET", "Une seule mise par reponse.", 400);
+    throw new GameRuleError("DUPLICATE_BET", "Une seule mise par réponse.", 400);
   }
 
   const total = positive.reduce((s, l) => s + l.amount, 0);
   if (total !== budget) {
     throw new GameRuleError(
       "BUDGET_MISMATCH",
-      `Il faut repartir exactement ${budget} points (${total} repartis).`,
+      `Il faut répartir exactement ${budget} points (${total} répartis).`,
       400,
     );
   }
@@ -170,7 +170,7 @@ export function validateBetDistribution(
   if (options.modifiers.requireSingleAnswerBet && positive.length !== 1) {
     throw new GameRuleError(
       "SINGLE_BET_REQUIRED",
-      "Tapis : tout le budget doit aller sur une seule reponse.",
+      "Tapis : tout le budget doit aller sur une seule réponse.",
       400,
     );
   }

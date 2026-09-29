@@ -45,7 +45,7 @@ export default function JoinSalon() {
       }
     >
       <Title>Rejoindre un salon</Title>
-      <Body muted>Demande son code a la personne qui a cree le salon.</Body>
+      <Body muted>Demande son code à la personne qui a créé le salon.</Body>
       <Field
         label="Code"
         value={code}

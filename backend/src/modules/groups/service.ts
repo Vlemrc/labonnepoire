@@ -38,7 +38,7 @@ async function assertThemesExist(themes: string[]) {
     throw new HttpError(
       400,
       "UNKNOWN_THEME",
-      `Thematique(s) inconnue(s) : ${unknown.join(", ")}.`,
+      `Thématique(s) inconnue(s) : ${unknown.join(", ")}.`,
     );
   }
 }
@@ -71,7 +71,7 @@ export async function createGroup(
       include: groupInclude,
     });
   }
-  throw new HttpError(500, "CODE_GENERATION_FAILED", "Impossible de generer un code de salon.");
+  throw new HttpError(500, "CODE_GENERATION_FAILED", "Impossible de générer un code de salon.");
 }
 
 export async function joinGroup(code: string, userId: string) {
@@ -95,7 +95,7 @@ export async function updateSettings(
 ) {
   const group = await loadGroup(groupId);
   if (group.ownerId !== userId) {
-    throw new HttpError(403, "NOT_OWNER", "Seul le createur du salon peut changer les reglages.");
+    throw new HttpError(403, "NOT_OWNER", "Seul le créateur du salon peut changer les réglages.");
   }
   if (Array.isArray(patch.themes)) await assertThemesExist(patch.themes as string[]);
 
@@ -103,7 +103,7 @@ export async function updateSettings(
   if (active?.status === "IN_PROGRESS") {
     throw new GameRuleError(
       "SESSION_IN_PROGRESS",
-      "Impossible de changer les reglages pendant une partie.",
+      "Impossible de changer les réglages pendant une partie.",
     );
   }
   await prisma.group.update({ where: { id: groupId }, data: patch });

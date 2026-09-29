@@ -55,10 +55,10 @@ export async function startSession(groupId: string, userId: string) {
   });
   if (!group) throw new HttpError(404, "GROUP_NOT_FOUND", "Salon introuvable.");
   if (group.ownerId !== userId) {
-    throw new HttpError(403, "NOT_OWNER", "Seul le createur du salon peut lancer une partie.");
+    throw new HttpError(403, "NOT_OWNER", "Seul le créateur du salon peut lancer une partie.");
   }
   if (group.sessions.length > 0) {
-    throw new GameRuleError("SESSION_ALREADY_RUNNING", "Une partie est deja en cours.");
+    throw new GameRuleError("SESSION_ALREADY_RUNNING", "Une partie est déjà en cours.");
   }
   if (group.members.length < MIN_PLAYERS_PER_SESSION) {
     throw new GameRuleError(

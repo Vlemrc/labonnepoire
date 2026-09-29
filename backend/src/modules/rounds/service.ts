@@ -101,7 +101,7 @@ async function drawCard(groupId: string, themes: string[], alsoExclude: string[]
     count = await prisma.card.count({ where });
   }
   if (count === 0) {
-    throw new GameRuleError("NO_CARD_AVAILABLE", "Aucune carte pour ces thematiques.");
+    throw new GameRuleError("NO_CARD_AVAILABLE", "Aucune carte pour ces thématiques.");
   }
   const [card] = await prisma.card.findMany({
     where,
@@ -134,7 +134,7 @@ export async function startManche(sessionId: string, userId: string) {
     where: { sessionId, status: { in: ["WRITING", "PENDING", "BETTING"] } },
   });
   if (pending > 0) {
-    throw new GameRuleError("MANCHE_IN_PROGRESS", "La manche en cours n'est pas terminee.");
+    throw new GameRuleError("MANCHE_IN_PROGRESS", "La manche en cours n'est pas terminée.");
   }
 
   const snapshots = session.players.map((p) => ({
@@ -146,7 +146,7 @@ export async function startManche(sessionId: string, userId: string) {
   const outcome = evaluateSessionOutcome(snapshots);
   if (outcome.isFinished) {
     await finishSession(sessionId, outcome.winnerId);
-    throw new GameRuleError("SESSION_FINISHED", "La partie est terminee.");
+    throw new GameRuleError("SESSION_FINISHED", "La partie est terminée.");
   }
 
   const active = session.players
@@ -333,21 +333,21 @@ export async function submitBets(roundId: string, userId: string, lines: BetLine
 export async function activateTwist(roundId: string, userId: string, code?: string) {
   const round = await loadRound(roundId);
   if (!round.session.group.twistsEnabled) {
-    throw new GameRuleError("TWISTS_DISABLED", "Les twists sont desactives sur ce salon.");
+    throw new GameRuleError("TWISTS_DISABLED", "Les twists sont désactivés sur ce salon.");
   }
   if (round.status !== "WRITING") {
     throw new GameRuleError(
       "TWIST_TOO_LATE",
-      "Un twist s'active avant que le bluffeur ait valide ses reponses.",
+      "Un twist s'active avant que le bluffeur ait validé ses réponses.",
     );
   }
   if (round.twistCode) {
-    throw new GameRuleError("TWIST_ALREADY_ACTIVE", "Un twist est deja actif sur ce round.");
+    throw new GameRuleError("TWIST_ALREADY_ACTIVE", "Un twist est déjà actif sur ce round.");
   }
   const player = round.session.players.find((p) => p.userId === userId);
   if (!player) throw new HttpError(403, "NOT_IN_SESSION", "Tu ne joues pas cette partie.");
   if (player.twistCardUsed) {
-    throw new GameRuleError("TWIST_CARD_SPENT", "Tu as deja utilise ta carte twist.");
+    throw new GameRuleError("TWIST_CARD_SPENT", "Tu as déjà utilisé ta carte twist.");
   }
 
   const available = (await prisma.twist.findMany({ where: { isActive: true } }))
@@ -380,7 +380,7 @@ export async function resolveRoundAndScore(roundId: string) {
     throw new GameRuleError("ROUND_NOT_BETTING", "Ce round n'est pas en phase de mises.");
   }
   if (!canResolve(toSnapshot(round), new Date())) {
-    throw new GameRuleError("ROUND_NOT_READY", "Tous les parieurs n'ont pas encore mise.");
+    throw new GameRuleError("ROUND_NOT_READY", "Tous les parieurs n'ont pas encore misé.");
   }
 
   const budgets: Record<string, number> = {};

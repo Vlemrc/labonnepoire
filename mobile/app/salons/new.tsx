@@ -62,7 +62,7 @@ export default function NewSalon() {
             <Text style={s.error}>{(createGroup.error as Error).message}</Text>
           ) : null}
           <Button
-            label={token ? "Creer le salon" : "Continuer"}
+            label={token ? "Créer le salon" : "Continuer"}
             onPress={() => void submit()}
             disabled={!canSubmit}
             loading={createGroup.isPending}
@@ -74,7 +74,7 @@ export default function NewSalon() {
       <Field label="Nom" value={name} onChangeText={setName} placeholder="Les copains" maxLength={40} />
 
       <View style={{ gap: spacing.sm }}>
-        <Label>Thematiques</Label>
+        <Label>Thématiques</Label>
         <View style={s.themes}>
           {themes.map((t) => {
             const active = selected.includes(t.theme);
@@ -106,15 +106,15 @@ export default function NewSalon() {
       </View>
 
       <Field
-        label="Capital de depart"
+        label="Capital de départ"
         value={startingPoints}
         onChangeText={setStartingPoints}
         keyboardType="number-pad"
       />
       {/* Il n'y a plus de budget par carte : on mise tout ce qu'il reste. */}
       <Body muted>
-        Chacun demarre avec ce capital et l'engage entierement a chaque carte.
-        Ce qu'on recupere, on le rejoue sur la suivante.
+        Chacun démarre avec ce capital et l'engage entièrement à chaque carte.
+        Ce qu'on récupère, on le rejoue sur la suivante.
       </Body>
     </Screen>
   );

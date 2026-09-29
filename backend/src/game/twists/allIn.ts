@@ -4,6 +4,6 @@ export const allIn: TwistDefinition = {
   code: "ALL_IN",
   label: "Tapis",
   description:
-    "Interdit de repartir : chaque parieur doit poser la totalite de son budget sur une seule reponse.",
+    "Interdit de répartir : chaque parieur doit poser la totalité de son budget sur une seule réponse.",
   apply: () => ({ requireSingleAnswerBet: true }),
 };
