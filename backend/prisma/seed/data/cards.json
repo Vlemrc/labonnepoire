@@ -185,8 +185,8 @@
   },
   {
     "theme": "insolite",
-    "question": "Cléopâtre a vécu plus près dans le temps de quel événement : la construction de la grande pyramide, ou le premier pas sur la Lune ?",
-    "trueAnswer": "Le premier pas sur la Lune",
+    "question": "Combien d'années séparent Cléopâtre de la construction de la grande pyramide de Gizeh ?",
+    "trueAnswer": "Environ 2 500 ans",
     "difficulty": 3,
     "status": "DRAFT",
     "source": null
@@ -249,8 +249,8 @@
   },
   {
     "theme": "insolite",
-    "question": "Sur Vénus, qu'est-ce qui dure le plus longtemps : un jour ou une année ?",
-    "trueAnswer": "Un jour",
+    "question": "Combien de temps met Vénus pour faire un tour complet sur elle-même ?",
+    "trueAnswer": "243 jours terrestres",
     "difficulty": 3,
     "status": "DRAFT",
     "source": null
@@ -305,8 +305,8 @@
   },
   {
     "theme": "insolite",
-    "question": "Qu'est-ce qui est le plus ancien : l'université d'Oxford ou l'Empire aztèque ?",
-    "trueAnswer": "L'université d'Oxford",
+    "question": "À quelle époque l'université d'Oxford a-t-elle commencé à enseigner ?",
+    "trueAnswer": "À la fin du XIe siècle",
     "difficulty": 3,
     "status": "DRAFT",
     "source": null

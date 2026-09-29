@@ -9,8 +9,19 @@ import { z } from "zod";
  * centaines de cartes, un fichier TypeScript devient illisible, impossible a
  * relire en diff et penible a editer pour quelqu'un qui n'ecrit pas de code.
  */
+/**
+ * « A ou B ? » : la reponse est forcee entre deux choix, alors qu'une carte en
+ * propose toujours trois, et le menteur n'a plus qu'un mensonge credible a
+ * inventer au lieu de deux. Une question doit rester ouverte.
+ */
+const TWO_CHOICE_QUESTION = /:[^?]*\sou\s[^?]*\?\s*$/i;
+
 export const cardSchema = z.object({
-  question: z.string().trim().min(10, "Question trop courte."),
+  question: z
+    .string()
+    .trim()
+    .min(10, "Question trop courte.")
+    .refine((q) => !TWO_CHOICE_QUESTION.test(q), "Question a deux choix : elle doit rester ouverte."),
   trueAnswer: z.string().trim().min(1, "Reponse vide."),
   theme: z
     .string()
