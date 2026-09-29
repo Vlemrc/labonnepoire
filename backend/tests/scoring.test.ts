@@ -60,7 +60,7 @@ describe("resolveRound — regles de base", () => {
     expect(out.pointsAfter[BLUFFEUR]).toBe(23);
   });
 
-  it("reste a somme nulle avec plusieurs parieurs", () => {
+  it("ne donne au menteur que sa part : les pertes divisees par le nombre de parieurs", () => {
     const out = resolveRound(
       baseInput({
         players: [
@@ -78,8 +78,49 @@ describe("resolveRound — regles de base", () => {
     );
     expect(out.deltas[ALICE]).toBe(-6);
     expect(out.deltas[BOB]).toBe(-10);
-    expect(out.deltas[BLUFFEUR]).toBe(16);
-    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
+    // 16 points perdus, 2 parieurs : 8 pour le menteur, 8 sortent du jeu.
+    expect(out.deltas[BLUFFEUR]).toBe(8);
+    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(-8);
+  });
+
+  it("reprend l'exemple de la regle : 20 points perdus a 4 parieurs, 5 pour le menteur", () => {
+    const CARL = "carl";
+    const DORA = "dora";
+    const out = resolveRound(
+      baseInput({
+        players: [
+          { userId: BLUFFEUR, points: 20 },
+          { userId: ALICE, points: 20 },
+          { userId: BOB, points: 20 },
+          { userId: CARL, points: 20 },
+          { userId: DORA, points: 20 },
+        ],
+        budgets: { [ALICE]: 20, [BOB]: 20, [CARL]: 20, [DORA]: 20 },
+        bets: [
+          bet(ALICE, "a-fake1", 20),
+          bet(BOB, "a-true", 20),
+          bet(CARL, "a-true", 20),
+          bet(DORA, "a-true", 20),
+        ],
+      }),
+    );
+    expect(out.deltas[ALICE]).toBe(-20);
+    expect(out.deltas[BLUFFEUR]).toBe(5);
+  });
+
+  it("arrondit la part du menteur a l'entier inferieur", () => {
+    const out = resolveRound(
+      baseInput({
+        players: [
+          { userId: BLUFFEUR, points: 20 },
+          { userId: ALICE, points: 20 },
+          { userId: BOB, points: 20 },
+        ],
+        budgets: { [ALICE]: 7, [BOB]: 7 },
+        bets: [bet(ALICE, "a-fake1", 7), bet(BOB, "a-true", 7)],
+      }),
+    );
+    expect(out.deltas[BLUFFEUR]).toBe(3);
   });
 
   it("cible l'auteur de la fausse reponse, pas systematiquement le bluffeur", () => {
@@ -238,7 +279,7 @@ describe("resolveRound — forfaits", () => {
     expect(out.deltas[BLUFFEUR]).toBe(10);
   });
 
-  it("combine forfaits et mises reelles en gardant la somme nulle", () => {
+  it("compte le forfait parmi les parieurs de la carte", () => {
     const out = resolveRound(
       baseInput({
         players: [
@@ -253,10 +294,10 @@ describe("resolveRound — forfaits", () => {
     );
     expect(out.deltas[ALICE]).toBe(0);
     expect(out.deltas[BOB]).toBe(-6);
-    expect(out.deltas[BLUFFEUR]).toBe(6);
+    // 6 points perdus, 2 parieurs engages (Alice a mise, Bob a declare forfait).
+    expect(out.deltas[BLUFFEUR]).toBe(3);
     expect(out.pointsAfter[BOB]).toBe(0);
     expect(out.eliminated).toEqual([BOB]);
-    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
   });
 });
 

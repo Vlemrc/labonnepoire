@@ -50,14 +50,16 @@ export interface ScoringOutcome {
 /**
  * Resolution d'un round.
  *
- * Invariant central : le jeu est a somme nulle. Aucun point n'est cree ni
- * detruit, ils ne font que changer de main. C'est ce qui garantit qu'une partie
- * se termine (quelqu'un finit forcement par tomber a zero).
+ * Invariant central : aucun point n'est cree. Ce qu'un menteur encaisse est
+ * divise par le nombre de parieurs de la carte, le reste sort du jeu : la
+ * masse totale ne fait que baisser, ce qui garantit qu'une partie se termine.
  *
  * - Mise sur la vraie reponse  -> le parieur la recupere, personne ne bouge.
- * - Mise sur une fausse        -> le parieur la perd au profit de son auteur.
+ * - Mise sur une fausse        -> le parieur la perd ; son auteur en touche 1/N.
  * - Mise « aucune » correcte   -> le bluffeur verse la prime au parieur.
- * - Mise « aucune » incorrecte -> le parieur la perd au profit du bluffeur.
+ * - Mise « aucune » incorrecte -> le parieur la perd ; le bluffeur en touche 1/N.
+ *
+ * N est le nombre de parieurs engages sur la carte (mises et forfaits).
  *
  * Fonction pure : aucun acces base, aucune date. Tout ce qui la concerne est
  * dans les arguments, ce qui la rend entierement testable.
@@ -84,6 +86,18 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
 
   const mult = modifiers.transferMultiplier;
 
+  // Ce que chaque menteur a pris aux parieurs, avant division : il ne touche
+  // que sa part, 1/N, une fois toutes les pertes comptees.
+  const taken: Record<string, number> = {};
+  const credit = (userId: string, amount: number) => {
+    taken[userId] = (taken[userId] ?? 0) + amount;
+  };
+  const voters = new Set(
+    [...bets.filter((b) => b.amount > 0), ...forfeits.filter((f) => f.amount > 0)].map(
+      (x) => x.bettorId,
+    ),
+  ).size;
+
   // --- Phase 1 : les transferts sortants des parieurs. ---------------------
   // La mise est bornee par le capital, mais un multiplicateur de transfert
   // (twist « Double ou rien ») peut la depasser : on plafonne donc chaque
@@ -102,7 +116,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
       if (noneOptionIsCorrect) continue; // traite en phase 2 (le bluffeur paie)
       const loss = takeFrom(bet.bettorId, Math.round(bet.amount * mult));
       deltas[bet.bettorId]! -= loss;
-      deltas[bluffeurId]! += loss;
+      credit(bluffeurId, loss);
       continue;
     }
 
@@ -116,7 +130,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
     ensureKnown(beneficiary);
     const loss = takeFrom(bet.bettorId, Math.round(bet.amount * mult));
     deltas[bet.bettorId]! -= loss;
-    deltas[beneficiary]! += loss;
+    credit(beneficiary, loss);
   }
 
   for (const forfeit of forfeits) {
@@ -124,7 +138,11 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
     if (forfeit.amount <= 0) continue;
     const loss = takeFrom(forfeit.bettorId, Math.round(forfeit.amount * mult));
     deltas[forfeit.bettorId]! -= loss;
-    deltas[bluffeurId]! += loss;
+    credit(bluffeurId, loss);
+  }
+
+  for (const [userId, amount] of Object.entries(taken)) {
+    deltas[userId]! += Math.floor(amount / Math.max(1, voters));
   }
 
   // --- Phase 2 : les obligations du bluffeur. ------------------------------
@@ -182,7 +200,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
     if (after <= 0) eliminated.push(p.userId);
   }
 
-  assertZeroSum(deltas);
+  assertNoPointCreated(deltas);
   return { deltas, pointsAfter, eliminated };
 }
 
@@ -221,6 +239,13 @@ function payProRata(
   }
   for (const s of shares) result.set(s.to, (result.get(s.to) ?? 0) + s.floor);
   return result;
+}
+
+function assertNoPointCreated(deltas: Record<string, number>): void {
+  const sum = Object.values(deltas).reduce((s, d) => s + d, 0);
+  if (sum > 0) {
+    throw new Error(`resolveRound: des points ont ete crees (total = ${sum})`);
+  }
 }
 
 function assertZeroSum(deltas: Record<string, number>): void {

@@ -37,7 +37,9 @@ chaque carte, il **engage la totalite de ce qu'il lui reste** et le repartit
 librement entre les propositions.
 
 - jetons poses sur la **vraie** reponse -> recuperes, ils repartent sur la carte suivante
-- jetons poses sur une **fausse** reponse -> perdus au profit de son auteur
+- jetons poses sur une **fausse** reponse -> perdus ; leur auteur en touche le
+  total divise par le nombre de parieurs de la carte (20 perdus a 4 parieurs :
+  5 pour le menteur), le reste sort du jeu
 - parieur qui **laisse passer la deadline** -> il perd un quart de son capital
 
 Exemple : tu commences a 20, tu mises 10 sur la bonne reponse et 10 a cote ; a
@@ -46,11 +48,12 @@ la carte suivante tu joues avec 10.
 Un joueur a **0 point est elimine** ; la partie s'arrete quand il ne reste
 qu'un joueur.
 
-Le jeu est **a somme nulle** : aucun point n'est cree ni detruit, ce qui
-garantit qu'une partie se termine. Cet invariant est verifie par assertion a
-chaque resolution (`assertZeroSum`). Corollaire moins evident : un transfert ne
-peut jamais rendre un capital negatif, y compris sous un twist qui double les
-echanges — la sortie est plafonnee a ce que le joueur possede reellement.
+**Aucun point n'est cree** : ce que le menteur ne touche pas disparait, la
+masse totale ne fait que baisser, ce qui garantit qu'une partie se termine. Cet
+invariant est verifie par assertion a chaque resolution (`assertNoPointCreated`).
+Corollaire moins evident : un transfert ne peut jamais rendre un capital
+negatif, y compris sous un twist qui double les echanges — la sortie est
+plafonnee a ce que le joueur possede reellement.
 
 ### Quand un joueur laisse tomber
 
@@ -60,7 +63,7 @@ partie.**
 
 | situation | consequence |
 |---|---|
-| un parieur laisse passer la deadline | son budget entier part au bluffeur, comme s'il avait tout mise a cote |
+| un parieur laisse passer la deadline | il perd un quart de son capital, comme une mise a cote : le bluffeur n'en touche que sa part |
 | le bluffeur n'ecrit pas a temps | le round est annule, il perd un budget de mise (`stakeBudget`) reparti a parts egales entre les parieurs, et on passe au bluffeur suivant |
 | un joueur quitte la partie | il est elimine, ses rounds en cours sont annules |
 
@@ -69,8 +72,8 @@ sur le nombre de parieurs, elle l'eliminerait des le premier oubli dans un salon
 un peu fourni. Elle est plafonnee a son capital, donc elle peut l'eliminer mais
 jamais le faire passer sous zero.
 
-Ces transferts passent par les memes fonctions pures que le reste et respectent
-l'invariant de somme nulle.
+Ces transferts passent par les memes fonctions pures que le reste. L'annulation
+d'un round reste a somme nulle : la penalite est integralement redistribuee.
 
 ### Deux mecaniques cachees
 
