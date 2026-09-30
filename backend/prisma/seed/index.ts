@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { SEED_CARDS, themeBreakdown } from "./cards.js";
 import { listTwists } from "../../src/game/twists/registry.js";
+import { REPORT_THRESHOLD } from "../../src/modules/cards/service.js";
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,10 @@ async function main() {
   // Les cartes sont identifiees par leur question : re-seeder met a jour le
   // contenu existant au lieu de creer des doublons, et ne touche jamais au
   // statut d'une carte deja relue ni a son compteur de signalements.
+  // Exception : une carte retiree parce qu'elle avait quitte le fichier, et
+  // qui y revient, reprend son statut. Sans quoi elle resterait hors du
+  // tirage pour toujours. Une carte ecartee par les signalements, elle, reste
+  // ecartee.
   let created = 0;
   let updated = 0;
   for (const card of SEED_CARDS) {
@@ -20,6 +25,9 @@ async function main() {
           theme: card.theme,
           difficulty: card.difficulty,
           ...(card.source ? { source: card.source } : {}),
+          ...(existing.status === "REJECTED" && existing.reportCount < REPORT_THRESHOLD
+            ? { status: card.status }
+            : {}),
         },
       });
       updated += 1;
