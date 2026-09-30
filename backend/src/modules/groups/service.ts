@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { generateGroupCode } from "../../lib/ids.js";
 import { GameRuleError } from "../../game/errors.js";
 import { HttpError } from "../../middleware/error.js";
+import { quitSession } from "../sessions/service.js";
 
 const groupInclude = {
   members: { include: { user: true }, orderBy: { joinedAt: "asc" } },
@@ -131,4 +132,37 @@ export async function deleteGroup(groupId: string, userId: string) {
     throw new HttpError(403, "NOT_OWNER", "Seul le créateur du salon peut le supprimer.");
   }
   await prisma.group.delete({ where: { id: groupId } });
+}
+
+/**
+ * Quitter le salon. Une partie en cours est abandonnee au passage, comme avec
+ * « quitter la partie ». Si l'hote s'en va, le salon passe au plus ancien
+ * membre restant : sans hote, plus personne ne pourrait lancer de partie.
+ * Le dernier a partir emporte le salon avec lui.
+ *
+ * Retourne le salon mis a jour, ou null s'il a ete supprime.
+ */
+export async function leaveGroup(groupId: string, userId: string) {
+  const group = await loadGroup(groupId);
+
+  const active = group.sessions[0];
+  if (active && (active.status === "LOBBY" || active.status === "IN_PROGRESS")) {
+    const seat = await prisma.sessionPlayer.findUnique({
+      where: { sessionId_userId: { sessionId: active.id, userId } },
+    });
+    if (seat && !seat.isEliminated) await quitSession(active.id, userId);
+  }
+
+  await prisma.groupMember.delete({ where: { groupId_userId: { groupId, userId } } });
+
+  const remaining = group.members.filter((m) => m.userId !== userId);
+  if (remaining.length === 0) {
+    await prisma.group.delete({ where: { id: groupId } });
+    return null;
+  }
+  if (group.ownerId === userId) {
+    // Les membres sont charges par ordre d'arrivee : le premier est le plus ancien.
+    await prisma.group.update({ where: { id: groupId }, data: { ownerId: remaining[0]!.userId } });
+  }
+  return loadGroup(groupId);
 }

@@ -107,6 +107,17 @@ export function useDeleteGroup() {
   });
 }
 
+/** Quitte le salon ; s'il ne reste plus personne, le serveur le supprime. */
+export function useLeaveGroup() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) =>
+      api<{ group: GroupSummary | null }>(`/groups/${groupId}/leave`, { method: "POST", token }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["groups"] }),
+  });
+}
+
 export function useStartSession() {
   const token = useToken();
   const refresh = useRefreshGame();

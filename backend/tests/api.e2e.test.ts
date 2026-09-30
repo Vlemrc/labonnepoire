@@ -554,6 +554,34 @@ describe("suppression du salon", () => {
     expect(await prisma.round.count({ where: { sessionId: session.id } })).toBe(0);
   });
 
+  it("supprime le salon quand le dernier membre le quitte", async () => {
+    const { players, group } = await setupSession(["Ana", "Bruno"]);
+    await as(players[1]!).post(`/groups/${group.id}/leave`).expect(200);
+    const left = await as(players[0]!).post(`/groups/${group.id}/leave`).expect(200);
+
+    expect(left.body.group).toBeNull();
+    expect(await prisma.group.count({ where: { id: group.id } })).toBe(0);
+  });
+
+  it("confie le salon au plus ancien membre quand l'hote s'en va", async () => {
+    const { players, owner, group } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    const res = await as(owner).post(`/groups/${group.id}/leave`).expect(200);
+
+    expect(res.body.group.ownerId).toBe(players[1]!.id);
+    expect(res.body.group.members.map((m: { id: string }) => m.id)).not.toContain(owner.id);
+    const list = await as(owner).get("/groups").expect(200);
+    expect(list.body.groups).toHaveLength(0);
+  });
+
+  it("fait abandonner la partie en cours a celui qui quitte le salon", async () => {
+    const { players, session, group } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    await as(players[2]!).post(`/groups/${group.id}/leave`).expect(200);
+
+    const view = (await as(players[0]!).get(`/sessions/${session.id}`).expect(200)).body.session;
+    expect(view.status).toBe("IN_PROGRESS");
+    expect(view.players.find((p: { userId: string }) => p.userId === players[2]!.id).isEliminated).toBe(true);
+  });
+
   it("refuse la suppression a un simple membre", async () => {
     const { players, group } = await setupSession(["Ana", "Bruno"]);
     const r = await as(players[1]!).delete(`/groups/${group.id}`).expect(403);

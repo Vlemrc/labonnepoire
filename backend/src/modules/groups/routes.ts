@@ -6,6 +6,7 @@ import {
   assertMember,
   createGroup,
   deleteGroup,
+  leaveGroup,
   joinGroup,
   listGroupsForUser,
   loadGroup,
@@ -54,6 +55,14 @@ groupsRouter.delete("/:groupId", async (req, res) => {
   await assertMember(req.params.groupId, userId);
   await deleteGroup(req.params.groupId, userId);
   res.status(204).end();
+});
+
+/** Quitte le salon ; le dernier a partir le supprime. */
+groupsRouter.post("/:groupId/leave", async (req, res) => {
+  const userId = currentUser(req).id;
+  await assertMember(req.params.groupId, userId);
+  const group = await leaveGroup(req.params.groupId, userId);
+  res.json({ group: group ? toGroupSummary(group) : null });
 });
 
 /** Lance une partie avec les membres actuels du salon. */

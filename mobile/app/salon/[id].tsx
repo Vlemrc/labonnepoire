@@ -8,6 +8,7 @@ import { shareInviteCode } from "../../src/lib/share";
 import {
   useDeleteGroup,
   useGroup,
+  useLeaveGroup,
   useSession,
   useStartManche,
   useStartSession,
@@ -36,6 +37,7 @@ export default function Salon() {
   const startSession = useStartSession();
   const startManche = useStartManche();
   const deleteGroup = useDeleteGroup();
+  const leaveGroup = useLeaveGroup();
   const [shareNote, setShareNote] = useState<string | null>(null);
 
   if (group.isPending) return <Loading />;
@@ -94,6 +96,16 @@ export default function Salon() {
         </Appear>
       ) : null}
 
+      {leaveGroup.error ? (
+        <Text style={st.error}>{(leaveGroup.error as Error).message}</Text>
+      ) : null}
+      <Button
+        label="Quitter le salon"
+        variant="ghost"
+        onPress={confirmLeave}
+        loading={leaveGroup.isPending}
+      />
+
       {isOwner ? (
         <>
           {deleteGroup.error ? (
@@ -131,6 +143,27 @@ export default function Salon() {
 
   const launching = startSession.isPending || startManche.isPending;
   const launchError = (startSession.error ?? startManche.error) as Error | null;
+
+  function confirmLeave() {
+    const leave = () =>
+      leaveGroup.mutate(g.id, {
+        onSuccess: () => (router.canGoBack() ? router.back() : router.replace("/salons")),
+      });
+    // On ne demande confirmation que si l'on perd quelque chose : le salon
+    // entier, ou la partie en cours. Sinon on revient quand on veut avec le code.
+    const last = g.members.every((m) => m.id === user?.id);
+    const playing = Boolean(s && s.status !== "FINISHED");
+    if (!last && !playing) return leave();
+
+    const lines = [
+      playing ? "Tu abandonnes la partie en cours." : null,
+      last ? "Tu es le dernier membre : le salon sera supprimé." : null,
+    ].filter(Boolean);
+    Alert.alert("Quitter le salon ?", lines.join(" "), [
+      { text: "Annuler", style: "cancel" },
+      { text: "Quitter", style: "destructive", onPress: leave },
+    ]);
+  }
 
   function confirmDelete() {
     const playing = s && s.status !== "FINISHED";
