@@ -139,8 +139,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   // Couleurs inversees : le creme marque la selection, comme ailleurs dans l'app.
-  // Le lisere vert garde la pastille visible sur le fond creme.
-  themeActive: { borderColor: colors.surface, backgroundColor: colors.primary },
+  themeActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   themeLabel: { fontFamily: fonts.bodySemi, color: colors.textMuted },
   themeLabelActive: { color: colors.primaryText },
   themeCount: { color: colors.textMuted, fontSize: 12 },

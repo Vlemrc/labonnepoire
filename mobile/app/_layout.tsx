@@ -142,7 +142,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <PendingSalonProvider>
-            <StatusBar style="dark" />
+            <StatusBar style="light" />
             <AuthGate />
           </PendingSalonProvider>
         </AuthProvider>

@@ -19,9 +19,9 @@ import { avatarSource } from "../avatars/registry";
 
 
 /**
- * Vrai a l'interieur d'une carte ou du pied d'ecran, qui sont vert feuille.
- * Le texte y est creme ; ailleurs il est pose sur le fond creme et prend
- * l'encre noire.
+ * Vrai a l'interieur d'une carte ou du pied d'ecran, qui sont vert foret.
+ * Les accents y sont vifs ; ailleurs le texte est pose sur le fond emeraude
+ * et prend les encres `ink`, plus pales.
  */
 const OnSurface = createContext(false);
 

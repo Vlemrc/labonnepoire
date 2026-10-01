@@ -49,6 +49,7 @@ export function Logo({
 const s = StyleSheet.create({
   stacked: { alignItems: "center" },
   // Pas de fontWeight : la graisse vient de la variante chargee (cf. theme.ts).
-  // Vert feuille, comme les cartes et la feuille de l'icone (5:1 sur le creme).
-  logo: { fontFamily: fonts.logo, color: colors.surface, letterSpacing: -0.5 },
+  // Le citron de l'icone. Sur l'emeraude il tient a 3.6:1 : assez pour un
+  // texte de cette taille, pas pour du courant.
+  logo: { fontFamily: fonts.logo, color: colors.brand, letterSpacing: -0.5 },
 });

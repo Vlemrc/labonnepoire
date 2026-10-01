@@ -1,52 +1,52 @@
 /**
- * Palette : fond creme tres clair, cartes vert feuille (celui de l'icone),
- * encre noire des yeux, saumon des joues pour les moments speciaux.
+ * Palette : fond vert emeraude, cartes vert foret tres sombre, creme pour le
+ * texte et les boutons, citron de l'icone pour le logo et les gains, violet
+ * en secondaire.
  *
- * Pas de blanc : le creme du fond est la seule couleur claire de l'app.
+ * Pas de blanc : le creme est la seule couleur claire de l'app.
  *
- * Deux encres coexistent. Le texte pose directement sur le fond creme prend
- * l'encre `ink`, le noir des yeux, et ses variantes. Dans les cartes et le
- * pied d'ecran vert feuille, le texte est creme. Les composants de texte de
- * ui.tsx choisissent seuls la bonne encre selon qu'ils sont dans une carte ou
- * non (cf. `useInk`).
+ * Deux encres coexistent. Le texte pose directement sur le fond emeraude
+ * prend l'encre `ink` et ses variantes, calibrees pour lui ; dans les cartes
+ * et le pied d'ecran, plus sombres, les accents peuvent etre plus vifs. Les
+ * composants de texte de ui.tsx choisissent seuls la bonne encre selon qu'ils
+ * sont dans une carte ou non (cf. `useInk`).
  *
  * `primary` (creme) porte les actions et les reperes de jeu : boutons, code du
- * salon, points, selection. `secondary` (saumon) marque les moments speciaux —
+ * salon, points, selection. `secondary` (violet) marque les moments speciaux —
  * twists et rounds « tout est faux ». `success` et `danger` restent reserves
  * aux gains et aux pertes : s'en servir aussi comme accents rendrait l'ecran
  * de resultats illisible.
  *
- * Le vert feuille est assez clair pour que les accents vifs y deviennent
- * illisibles (le saumon de l'icone y tombe a 2.2:1) : sur les cartes, les
- * accents sont des teintes tres pales, qui se distinguent surtout par leur
- * contexte.
- *
- * Contrastes verifies. Sur les cartes : creme a 5:1, attenue a 4.7:1, saumon
- * pale a 4.7:1, citron pale a 4.8:1, rose pale a 4.6:1. Sur le fond : encre a
- * 15.5:1, encre attenuee a 5.5:1, saumon fonce a 5.4:1, vert feuille a 5:1,
- * rouge fonce a 7.5:1.
+ * Contrastes verifies. Sur les cartes : creme a 11.7:1, attenue a 9.8:1,
+ * violet a 4.8:1, rouge a 5.6:1, citron a 8.2:1. Sur le fond : creme a 5:1,
+ * attenue a 4.5:1, violet pale a 4.7:1, citron pale a 4.9:1, rose pale a
+ * 4.6:1 ; le logo citron, en tres grand, a 3.6:1. C'est la raison d'etre des
+ * cartes sombres : sur l'emeraude seul, le violet tombe a 2.1:1.
  */
 export const colors = {
-  // Le fond de l'app : creme tres clair, tirant vers le jaune-vert.
-  bg: "#F6F7E3",
-  // Encres du texte pose directement sur le fond creme.
-  ink: "#1D1D1B",
-  inkMuted: "#62654F",
-  inkSecondary: "#A8452A",
-  inkSuccess: "#127C00",
-  inkDanger: "#9B1C12",
-  // Les cartes prennent le vert de la feuille.
-  surface: "#127C00",
-  surfaceHigh: "#0E6600",
-  border: "#0B5200",
+  // Le fond de l'app : vert emeraude.
+  bg: "#047857",
+  // Encres du texte pose directement sur le fond emeraude.
+  ink: "#F6F7E3",
+  inkMuted: "#D9EEDF",
+  inkSecondary: "#F3E8FF",
+  inkSuccess: "#E4FF7A",
+  inkDanger: "#FFE4E0",
+  // Le citron de l'icone, reserve au logo.
+  brand: "#B5E000",
+  // Les cartes sont un vert foret bien plus sombre : c'est ce qui permet aux
+  // accents — et surtout au violet — de rester lisibles.
+  surface: "#043B24",
+  surfaceHigh: "#0A5236",
+  border: "#10A06B",
   text: "#F6F7E3",
-  textMuted: "#EEF1D5",
-  // Le creme du fond sert aussi aux boutons et au texte des cartes.
+  textMuted: "#CFE8D8",
+  // Bouton creme a texte vert foret : le contraste maximal disponible ici.
   primary: "#F6F7E3",
-  primaryText: "#127C00",
-  secondary: "#FFEDE6",
-  danger: "#FFE8E4",
-  success: "#E4FF7A",
+  primaryText: "#043B24",
+  secondary: "#C084FC",
+  danger: "#FF8A80",
+  success: "#B5E000",
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
@@ -89,7 +89,7 @@ export const font = {
  * une table plutot que de flotter. C'est ce qui donne au jeu son air de jeu.
  */
 export const sticker = {
-  shadowColor: "#0B4A00",
+  shadowColor: "#022416",
   shadowOpacity: 1,
   shadowRadius: 0,
   shadowOffset: { width: 3, height: 5 },
