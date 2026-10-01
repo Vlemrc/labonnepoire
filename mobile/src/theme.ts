@@ -40,8 +40,9 @@ export const radius = { sm: 8, md: 14, lg: 22, pill: 999 } as const;
  *
  * Bricolage Grotesque porte les titres : une grotesque contemporaine au dessin
  * marque, qui donne au jeu une tete a lui. Outfit assure la lecture courante.
- * Space Mono est reserve au code du salon — une vraie chasse fixe, pour que les
- * caracteres s'alignent et se dictent sans ambiguite.
+ * Gluten, ronde et bonhomme, est reservee au logo : ailleurs elle ferait
+ * concurrence au titre. Space Mono est reserve au code du salon — une vraie
+ * chasse fixe, pour que les caracteres s'alignent et se dictent sans ambiguite.
  *
  * Avec des polices chargees, on ne declare JAMAIS de fontWeight : iOS
  * fabriquerait une fausse graisse par-dessus la vraie. La graisse se choisit en
@@ -50,6 +51,7 @@ export const radius = { sm: 8, md: 14, lg: 22, pill: 999 } as const;
 export const fonts = {
   display: "BricolageGrotesque_800ExtraBold",
   displaySemi: "BricolageGrotesque_600SemiBold",
+  logo: "Gluten_800ExtraBold",
   body: "Outfit_500Medium",
   bodySemi: "Outfit_600SemiBold",
   bodyBold: "Outfit_700Bold",

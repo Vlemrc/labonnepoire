@@ -13,6 +13,7 @@ import {
   Outfit_600SemiBold,
   Outfit_700Bold,
 } from "@expo-google-fonts/outfit";
+import { Gluten_800ExtraBold } from "@expo-google-fonts/gluten";
 import { SpaceMono_700Bold } from "@expo-google-fonts/space-mono";
 import { useFonts } from "expo-font";
 import { AuthProvider, useAuth } from "../src/auth/AuthContext";
@@ -125,6 +126,7 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_800ExtraBold,
     BricolageGrotesque_600SemiBold,
+    Gluten_800ExtraBold,
     Outfit_500Medium,
     Outfit_600SemiBold,
     Outfit_700Bold,

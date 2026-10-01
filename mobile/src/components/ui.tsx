@@ -8,7 +8,9 @@ import {
   Text,
   TextInput,
   View,
+  type StyleProp,
   type TextInputProps,
+  type TextStyle,
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -60,8 +62,16 @@ export function Heading({ children }: { children: ReactNode }) {
   return <Text style={s.heading}>{children}</Text>;
 }
 
-export function Body({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return <Text style={[s.body, muted && s.muted]}>{children}</Text>;
+export function Body({
+  children,
+  muted,
+  style,
+}: {
+  children: ReactNode;
+  muted?: boolean;
+  style?: StyleProp<TextStyle>;
+}) {
+  return <Text style={[s.body, muted && s.muted, style]}>{children}</Text>;
 }
 
 export function Label({ children }: { children: ReactNode }) {
