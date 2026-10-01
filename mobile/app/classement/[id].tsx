@@ -112,6 +112,6 @@ const s_ = StyleSheet.create({
   },
   rankText: { fontFamily: fonts.display, fontSize: 15, color: colors.text },
   name: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.text },
-  me: { color: colors.primary },
+  me: { fontFamily: fonts.display },
   detail: { color: colors.textMuted, fontSize: 13 },
 });

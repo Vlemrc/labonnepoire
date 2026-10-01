@@ -101,7 +101,7 @@ function AuthGate() {
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
+        headerTintColor: colors.ink,
         headerTitleStyle: { fontFamily: fonts.display },
         // Chevron seul : le libelle de l'ecran precedent tronque les titres
         // longs et n'apprend rien que la fleche ne dise deja.
@@ -142,7 +142,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <PendingSalonProvider>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <AuthGate />
           </PendingSalonProvider>
         </AuthProvider>

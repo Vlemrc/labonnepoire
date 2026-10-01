@@ -8,18 +8,7 @@ import { BluffScreen } from "../../src/screens/BluffScreen";
 import { BetScreen } from "../../src/screens/BetScreen";
 import { ResultScreen } from "../../src/screens/ResultScreen";
 import { LiveBetsScreen } from "../../src/screens/LiveBetsScreen";
-import {
-  Avatar,
-  Body,
-  Button,
-  Card,
-  ErrorView,
-  Heading,
-  Loading,
-  Pill,
-  Screen,
-  Title,
-} from "../../src/components/ui";
+import { Avatar, Body, Button, Card, ErrorText, ErrorView, Heading, Loading, Pill, Screen, Title } from "../../src/components/ui";
 import { Deadline } from "../../src/components/Deadline";
 import { colors, fonts, spacing } from "../../src/theme";
 
@@ -252,7 +241,7 @@ function Waiting({
 
       {canTwist ? (
         <>
-          {twist.error ? <Text style={s.error}>{(twist.error as Error).message}</Text> : null}
+          {twist.error ? <ErrorText>{(twist.error as Error).message}</ErrorText> : null}
           <Button
             label="Jouer ma carte twist"
             variant="ghost"
@@ -273,5 +262,4 @@ const s = StyleSheet.create({
   name: { flex: 1, color: colors.text, fontSize: 16 },
   bigDelta: { fontFamily: fonts.display, fontSize: 44 },
   delta: { fontFamily: fonts.display, fontSize: 17, minWidth: 40, textAlign: "right" },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

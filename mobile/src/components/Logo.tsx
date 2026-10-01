@@ -49,5 +49,6 @@ export function Logo({
 const s = StyleSheet.create({
   stacked: { alignItems: "center" },
   // Pas de fontWeight : la graisse vient de la variante chargee (cf. theme.ts).
-  logo: { fontFamily: fonts.logo, color: colors.text, letterSpacing: -0.5 },
+  // Vert feuille, comme les cartes et la feuille de l'icone (5:1 sur le creme).
+  logo: { fontFamily: fonts.logo, color: colors.surface, letterSpacing: -0.5 },
 });

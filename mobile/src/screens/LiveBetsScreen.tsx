@@ -106,10 +106,10 @@ export function LiveBetsScreen({ round }: { round: RoundView }) {
 const s = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", gap: spacing.sm },
   total: { alignItems: "center" },
-  totalValue: { fontFamily: fonts.display, fontSize: 40, lineHeight: 42, color: colors.primary },
-  totalLabel: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1.4, color: colors.textMuted, textTransform: "uppercase" },
+  totalValue: { fontFamily: fonts.display, fontSize: 40, lineHeight: 42, color: colors.ink },
+  totalLabel: { fontFamily: fonts.bodyBold, fontSize: 12, letterSpacing: 1.4, color: colors.inkMuted, textTransform: "uppercase" },
   optionHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  sum: { fontFamily: fonts.display, fontSize: 32, color: colors.primary, minWidth: 44, textAlign: "right" },
+  sum: { fontFamily: fonts.display, fontSize: 32, color: colors.text, minWidth: 44, textAlign: "right" },
   sumEmpty: { color: colors.textMuted },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
 import { Appear } from "../components/Appear";
-import { Body, Button, Card, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
+import { Body, Button, Card, ErrorText, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
 import { colors, fonts, spacing } from "../theme";
 
@@ -31,7 +31,7 @@ export function BluffScreen({ round }: { round: RoundView }) {
     <Screen
       footer={
         <>
-          {submit.error ? <Text style={s.error}>{(submit.error as Error).message}</Text> : null}
+          {submit.error ? <ErrorText>{(submit.error as Error).message}</ErrorText> : null}
           <Button
             label="Envoyer mes mensonges"
             onPress={() => void submit.mutateAsync(answers.map((a) => a.trim()))}
@@ -104,5 +104,4 @@ const s = StyleSheet.create({
     gap: spacing.xs,
   },
   truthText: { fontFamily: fonts.display, fontSize: 19, color: colors.success },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

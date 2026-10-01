@@ -5,7 +5,7 @@ import type { RoundView } from "@poire/shared";
 import { useAuth } from "../auth/AuthContext";
 import { useReportCard, useSession, useStartManche } from "../api/hooks";
 import { Appear } from "../components/Appear";
-import { Avatar, Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
+import { Avatar, Body, Button, Card, ErrorText, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { colors, fonts, spacing } from "../theme";
 
 export function ResultScreen({ round }: { round: RoundView }) {
@@ -48,7 +48,7 @@ export function ResultScreen({ round }: { round: RoundView }) {
   ) : canStartManche ? (
     <>
       {startManche.error ? (
-        <Text style={s.error}>{(startManche.error as Error).message}</Text>
+        <ErrorText>{(startManche.error as Error).message}</ErrorText>
       ) : null}
       <Button label="Manche suivante" onPress={() => void nextManche()} loading={startManche.isPending} />
     </>
@@ -184,7 +184,6 @@ export function ResultScreen({ round }: { round: RoundView }) {
 }
 
 const s = StyleSheet.create({
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
   bigDelta: { fontFamily: fonts.display, fontSize: 44 },
   answerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   authorRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },

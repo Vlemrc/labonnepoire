@@ -5,7 +5,7 @@ import { DEFAULT_STARTING_POINTS } from "@poire/shared";
 import { useCreateGroup, useThemes } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth/AuthContext";
 import { usePendingSalon } from "../../src/onboarding/PendingSalon";
-import { Body, Button, ErrorView, Field, Label, Loading, Screen, Title } from "../../src/components/ui";
+import { Body, Button, ErrorText, ErrorView, Field, Label, Loading, Screen, Title } from "../../src/components/ui";
 import { colors, fonts, radius, spacing } from "../../src/theme";
 
 const THEME_LABELS: Record<string, string> = {
@@ -59,7 +59,7 @@ export default function NewSalon() {
       footer={
         <>
           {createGroup.error ? (
-            <Text style={s.error}>{(createGroup.error as Error).message}</Text>
+            <ErrorText>{(createGroup.error as Error).message}</ErrorText>
           ) : null}
           <Button
             label={token ? "Créer le salon" : "Continuer"}
@@ -138,13 +138,14 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  // Couleurs inversees : le blanc marque la selection, comme ailleurs dans l'app.
-  themeActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  // Couleurs inversees : le creme marque la selection, comme ailleurs dans l'app.
+  // Le lisere vert garde la pastille visible sur le fond creme.
+  themeActive: { borderColor: colors.surface, backgroundColor: colors.primary },
   themeLabel: { fontFamily: fonts.bodySemi, color: colors.textMuted },
   themeLabelActive: { color: colors.primaryText },
   themeCount: { color: colors.textMuted, fontSize: 12 },
   themeCountActive: { color: colors.primaryText, opacity: 0.6 },
-  strong: { fontFamily: fonts.bodyBold, color: colors.text },
+  // Pas de couleur : elle vient du Body englobant, qui l'adapte au fond.
+  strong: { fontFamily: fonts.bodyBold },
   row: { flexDirection: "row", gap: spacing.md },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

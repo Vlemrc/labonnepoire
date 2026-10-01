@@ -5,7 +5,7 @@ import { GROUP_CODE_LENGTH } from "@poire/shared";
 import { useJoinGroup } from "../../src/api/hooks";
 import { useAuth } from "../../src/auth/AuthContext";
 import { usePendingSalon } from "../../src/onboarding/PendingSalon";
-import { Body, Button, Field, Screen, Title } from "../../src/components/ui";
+import { Body, Button, ErrorText, Field, Screen, Title } from "../../src/components/ui";
 import { colors, font } from "../../src/theme";
 
 export default function JoinSalon() {
@@ -34,7 +34,7 @@ export default function JoinSalon() {
     <Screen
       footer={
         <>
-          {join.error ? <Text style={s.error}>{(join.error as Error).message}</Text> : null}
+          {join.error ? <ErrorText>{(join.error as Error).message}</ErrorText> : null}
           <Button
             label={token ? "Rejoindre" : "Continuer"}
             onPress={() => void submit()}
@@ -71,5 +71,4 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     paddingVertical: 18,
   },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

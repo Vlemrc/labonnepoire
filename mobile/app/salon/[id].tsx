@@ -13,19 +13,7 @@ import {
   useStartManche,
   useStartSession,
 } from "../../src/api/hooks";
-import {
-  Avatar,
-  Body,
-  Button,
-  Card,
-  ErrorView,
-  Heading,
-  Label,
-  Loading,
-  Pill,
-  Screen,
-  Title,
-} from "../../src/components/ui";
+import { Avatar, Body, Button, Card, ErrorText, ErrorView, Heading, Label, Loading, Pill, Screen, Title } from "../../src/components/ui";
 import { colors, font, fonts, spacing, sticker } from "../../src/theme";
 
 export default function Salon() {
@@ -97,7 +85,7 @@ export default function Salon() {
       ) : null}
 
       {leaveGroup.error ? (
-        <Text style={st.error}>{(leaveGroup.error as Error).message}</Text>
+        <ErrorText>{(leaveGroup.error as Error).message}</ErrorText>
       ) : null}
       <Button
         label="Quitter le salon"
@@ -109,7 +97,7 @@ export default function Salon() {
       {isOwner ? (
         <>
           {deleteGroup.error ? (
-            <Text style={st.error}>{(deleteGroup.error as Error).message}</Text>
+            <ErrorText>{(deleteGroup.error as Error).message}</ErrorText>
           ) : null}
           <Button
             label="Supprimer le salon"
@@ -193,7 +181,7 @@ export default function Salon() {
       if (!isOwner) return <Body muted>En attente que l'hôte lance la partie.</Body>;
       return (
         <>
-          {launchError ? <Text style={st.error}>{launchError.message}</Text> : null}
+          {launchError ? <ErrorText>{launchError.message}</ErrorText> : null}
           <Button
             label="Lancer la partie"
             onPress={() => void launchGame()}
@@ -210,7 +198,7 @@ export default function Salon() {
       return (
         <>
           <Body>{winner ? `${winner.pseudo} remporte la partie.` : "Partie terminée."}</Body>
-          {launchError ? <Text style={st.error}>{launchError.message}</Text> : null}
+          {launchError ? <ErrorText>{launchError.message}</ErrorText> : null}
           {isOwner ? (
             <Button label="Nouvelle partie" onPress={() => void launchGame()} loading={launching} />
           ) : null}
@@ -241,7 +229,7 @@ export default function Salon() {
     return (
       <>
         {startManche.error ? (
-          <Text style={st.error}>{(startManche.error as Error).message}</Text>
+          <ErrorText>{(startManche.error as Error).message}</ErrorText>
         ) : null}
         <Button
           label={s.manche > 0 ? "Manche suivante" : "Lancer la première manche"}
@@ -372,5 +360,4 @@ const st = StyleSheet.create({
   points: { ...font.heading, color: colors.secondary },
   eliminated: { opacity: 0.45 },
   waitingRow: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.xs },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
 import { Appear } from "../components/Appear";
-import { Body, Button, Card, Heading, Label, Pill, Screen, Title } from "../components/ui";
+import { Body, Button, Card, ErrorText, Heading, Label, Pill, Screen, Title } from "../components/ui";
 import { Deadline } from "../components/Deadline";
 import { QuestionCard } from "../components/QuestionCard";
 import { colors, fonts, radius, spacing, sticker } from "../theme";
@@ -56,7 +56,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
     <Screen
       footer={
         <>
-          {submit.error ? <Text style={s.error}>{(submit.error as Error).message}</Text> : null}
+          {submit.error ? <ErrorText>{(submit.error as Error).message}</ErrorText> : null}
           <Button
             label={remaining > 0 ? `Encore ${remaining} jeton${remaining > 1 ? "s" : ""}` : "Valider mes mises"}
             onPress={() => void send()}
@@ -184,7 +184,7 @@ const s = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 40,
     lineHeight: 42,
-    color: colors.primary,
+    color: colors.ink,
   },
   optionHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   index: {
@@ -219,5 +219,4 @@ const s = StyleSheet.create({
   stepLabel: { fontFamily: fonts.display, fontSize: 22, color: colors.text, lineHeight: 26 },
   stepLabelSmall: { fontSize: 15, lineHeight: 18 },
   amount: { fontFamily: fonts.display, fontSize: 24, color: colors.text, minWidth: 34, textAlign: "center" },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

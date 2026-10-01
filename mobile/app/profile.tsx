@@ -7,7 +7,7 @@ import { api } from "../src/api/client";
 import { useAuth } from "../src/auth/AuthContext";
 import { usePendingSalon } from "../src/onboarding/PendingSalon";
 import { AVATAR_IDS, AVATAR_LABELS, DEFAULT_AVATAR, type AvatarId } from "../src/avatars/registry";
-import { Avatar, Body, Button, Field, Label, Screen, Title } from "../src/components/ui";
+import { Avatar, Body, Button, ErrorText, Field, Label, Screen, Title } from "../src/components/ui";
 import { colors, fonts, radius, spacing } from "../src/theme";
 
 /**
@@ -76,7 +76,7 @@ export default function Profile() {
     <Screen
       footer={
         <>
-          {error ? <Text style={s.error}>{error}</Text> : null}
+          {error ? <ErrorText>{error}</ErrorText> : null}
           <Button
             label={pending.kind === "create" ? "Créer le salon" : "Rejoindre le salon"}
             onPress={submit}
@@ -139,10 +139,10 @@ const s = StyleSheet.create({
     fontFamily: fonts.display,
     fontSize: 26,
     letterSpacing: -0.5,
-    color: colors.text,
+    color: colors.ink,
     textAlign: "center",
   },
-  previewNamePlaceholder: { color: colors.textMuted, opacity: 0.6 },
+  previewNamePlaceholder: { color: colors.inkMuted, opacity: 0.6 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   option: {
     padding: 4,
@@ -152,5 +152,4 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   optionSelected: { borderColor: colors.secondary, backgroundColor: colors.surfaceHigh },
-  error: { color: colors.danger, fontSize: 14, textAlign: "center" },
 });

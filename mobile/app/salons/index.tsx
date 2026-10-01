@@ -97,7 +97,7 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
     >
       <SymbolView
         name="rectangle.portrait.and.arrow.right"
-        tintColor={colors.text}
+        tintColor={colors.ink}
         size={20}
         weight="semibold"
         // SF Symbols n'existe que sur iOS : ailleurs, une fleche suffit.
@@ -110,7 +110,7 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
 const s = StyleSheet.create({
   me: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   headerIcon: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerFallback: { color: colors.text, fontSize: 20 },
+  headerFallback: { color: colors.ink, fontSize: 20 },
   groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   code: { ...font.mono, fontSize: 15, color: colors.secondary },
   avatars: { flexDirection: "row", gap: spacing.xs },
@@ -125,5 +125,5 @@ const s = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.xl,
   },
-  emptyText: { ...font.body, fontSize: 16, lineHeight: 23, color: colors.textMuted, textAlign: "center" },
+  emptyText: { ...font.body, fontSize: 16, lineHeight: 23, color: colors.inkMuted, textAlign: "center" },
 });

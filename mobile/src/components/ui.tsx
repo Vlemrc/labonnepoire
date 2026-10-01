@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -17,6 +17,35 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, font, fonts, radius, spacing, sticker } from "../theme";
 import { avatarSource } from "../avatars/registry";
 
+
+/**
+ * Vrai a l'interieur d'une carte ou du pied d'ecran, qui sont vert feuille.
+ * Le texte y est creme ; ailleurs il est pose sur le fond creme et prend
+ * l'encre noire.
+ */
+const OnSurface = createContext(false);
+
+/** Couleurs de texte adaptees a ce qui se trouve dessous. */
+export function useInk() {
+  const onSurface = useContext(OnSurface);
+  return onSurface
+    ? {
+        text: colors.text,
+        muted: colors.textMuted,
+        primary: colors.primary,
+        secondary: colors.secondary,
+        success: colors.success,
+        danger: colors.danger,
+      }
+    : {
+        text: colors.ink,
+        muted: colors.inkMuted,
+        primary: colors.ink,
+        secondary: colors.inkSecondary,
+        success: colors.inkSuccess,
+        danger: colors.inkDanger,
+      };
+}
 
 export function Screen({
   children,
@@ -49,17 +78,21 @@ export function Screen({
   return (
     <SafeAreaView style={s.screen} edges={headerless ? ["top", "left", "right"] : ["left", "right"]}>
       {body}
-      {footer ? <View style={s.footer}>{footer}</View> : null}
+      {footer ? (
+        <OnSurface.Provider value>
+          <View style={s.footer}>{footer}</View>
+        </OnSurface.Provider>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 export function Title({ children }: { children: ReactNode }) {
-  return <Text style={s.title}>{children}</Text>;
+  return <Text style={[s.title, { color: useInk().text }]}>{children}</Text>;
 }
 
 export function Heading({ children }: { children: ReactNode }) {
-  return <Text style={s.heading}>{children}</Text>;
+  return <Text style={[s.heading, { color: useInk().text }]}>{children}</Text>;
 }
 
 export function Body({
@@ -71,15 +104,25 @@ export function Body({
   muted?: boolean;
   style?: StyleProp<TextStyle>;
 }) {
-  return <Text style={[s.body, muted && s.muted, style]}>{children}</Text>;
+  const ink = useInk();
+  return <Text style={[s.body, { color: muted ? ink.muted : ink.text }, style]}>{children}</Text>;
 }
 
 export function Label({ children }: { children: ReactNode }) {
-  return <Text style={s.label}>{children}</Text>;
+  return <Text style={[s.label, { color: useInk().muted }]}>{children}</Text>;
+}
+
+/** Message d'erreur, dans le rouge lisible sur ce qui se trouve dessous. */
+export function ErrorText({ children }: { children: ReactNode }) {
+  return <Text style={[s.errorText, { color: useInk().danger }]}>{children}</Text>;
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
-  return <View style={[s.card, style]}>{children}</View>;
+  return (
+    <OnSurface.Provider value>
+      <View style={[s.card, style]}>{children}</View>
+    </OnSurface.Provider>
+  );
 }
 
 export function Button({
@@ -159,8 +202,8 @@ export function Avatar({ avatar, size = 44 }: { avatar: string; size?: number })
 export function Loading({ label = "Chargement…" }: { label?: string }) {
   return (
     <View style={s.center}>
-      <ActivityIndicator color={colors.primary} />
-      <Text style={[s.body, s.muted, { marginTop: spacing.sm }]}>{label}</Text>
+      <ActivityIndicator color={colors.ink} />
+      <Text style={[s.body, { color: colors.inkMuted, marginTop: spacing.sm }]}>{label}</Text>
     </View>
   );
 }
@@ -169,7 +212,7 @@ export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => 
   const message = error instanceof Error ? error.message : "Une erreur est survenue.";
   return (
     <View style={s.center}>
-      <Text style={[s.body, { color: colors.danger, textAlign: "center" }]}>{message}</Text>
+      <Text style={[s.body, { color: colors.inkDanger, textAlign: "center" }]}>{message}</Text>
       {onRetry ? (
         <View style={{ marginTop: spacing.md }}>
           <Button label="Réessayer" variant="ghost" onPress={onRetry} />
@@ -180,12 +223,13 @@ export function ErrorView({ error, onRetry }: { error: unknown; onRetry?: () => 
 }
 
 export function Pill({ text, tone = "muted" }: { text: string; tone?: "muted" | "good" | "bad" | "primary" | "secondary" }) {
+  const ink = useInk();
   const TONES = {
-    good: colors.success,
-    bad: colors.danger,
-    primary: colors.primary,
-    secondary: colors.secondary,
-    muted: colors.textMuted,
+    good: ink.success,
+    bad: ink.danger,
+    primary: ink.primary,
+    secondary: ink.secondary,
+    muted: ink.muted,
   } as const;
   const toneColor = TONES[tone];
   return (
@@ -206,11 +250,12 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
     gap: spacing.sm,
   },
-  title: { ...font.title, color: colors.text },
-  heading: { ...font.heading, color: colors.text },
-  body: { ...font.body, color: colors.text, lineHeight: 23 },
-  label: { ...font.label, color: colors.textMuted, textTransform: "uppercase" },
-  muted: { color: colors.textMuted },
+  // Couleur fournie a l'affichage par useInk : elle depend du fond.
+  title: { ...font.title },
+  heading: { ...font.heading },
+  body: { ...font.body, lineHeight: 23 },
+  label: { ...font.label, textTransform: "uppercase" },
+  errorText: { ...font.body, fontSize: 14, textAlign: "center" },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
