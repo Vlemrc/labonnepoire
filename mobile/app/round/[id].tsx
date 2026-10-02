@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import type { RoundView, SessionView } from "@poire/shared";
 import { useAuth } from "../../src/auth/AuthContext";
 import { useActivateTwist, useRound, useSession } from "../../src/api/hooks";
@@ -26,6 +26,17 @@ export default function Round() {
   const router = useRouter();
   const round = useRound(id);
   const session = useSession(round.data?.sessionId);
+  const navigation = useNavigation();
+
+  // Son capital reste visible quelle que soit la phase : c'est ce qu'on joue a
+  // chaque carte. L'en-tete est commun a toutes les branches ci-dessous, d'ou
+  // setOptions plutot qu'un <Stack.Screen> a repeter dans chaque retour.
+  const myPoints = session.data?.players.find((p) => p.userId === user?.id)?.points;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: myPoints === undefined ? undefined : () => <HeaderPoints points={myPoints} />,
+    });
+  }, [navigation, myPoints]);
 
   // Une fois ses mensonges ecrits, on attend sur sa propre carte. Des que tout
   // le monde a ecrit, une carte s'ouvre aux mises : on y bascule tout seul,
@@ -101,6 +112,19 @@ export default function Round() {
           : "Tes mises sont enregistrées, secrètes jusqu'au bout."
       }
     />
+  );
+}
+
+function HeaderPoints({ points }: { points: number }) {
+  return (
+    <View
+      style={s.headerPoints}
+      accessible
+      accessibilityLabel={`${points} point${points > 1 ? "s" : ""}`}
+    >
+      <Text style={s.headerPointsValue}>{points}</Text>
+      <Text style={s.headerPointsUnit}>pts</Text>
+    </View>
   );
 }
 
@@ -215,4 +239,9 @@ function Waiting({
 const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },
+  // iOS pose les boutons d'en-tete dans une bulle de verre claire : texte
+  // fonce, comme la fleche de retour, sinon le creme s'y perd.
+  headerPoints: { flexDirection: "row", alignItems: "baseline", gap: 3, paddingHorizontal: spacing.xs },
+  headerPointsValue: { fontFamily: fonts.display, fontSize: 18, color: colors.primaryText },
+  headerPointsUnit: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.primaryText },
 });
