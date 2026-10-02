@@ -12,15 +12,27 @@ export default function Salons() {
   const router = useRouter();
   const { data: groups, isPending, error, refetch } = useGroups();
 
-  // Le compte n'a pas de mot de passe : se deconnecter efface le seul acces a
-  // ce pseudo. Une icone se touche vite par megarde, d'ou la confirmation.
-  function confirmSignOut() {
+  // On ne s'est jamais vraiment connecte : pas de mot de passe, juste un
+  // pseudo. Partir efface pourtant le seul acces a ce pseudo et a ses salons,
+  // et une icone se touche vite par megarde, d'ou la confirmation.
+  async function leave() {
+    try {
+      await signOut();
+    } catch (e) {
+      Alert.alert(
+        "Impossible de partir",
+        `${e instanceof Error ? e.message : "Une erreur est survenue."} Réessaie dans un instant.`,
+      );
+    }
+  }
+
+  function confirmLeave() {
     Alert.alert(
-      "Se déconnecter ?",
-      "Ton compte n'a pas de mot de passe : tu ne pourras pas le retrouver sur cet appareil.",
+      "Partir ?",
+      "Tu perdras ton pseudo et tes salons sur cet appareil.",
       [
-        { text: "Annuler", style: "cancel" },
-        { text: "Se déconnecter", style: "destructive", onPress: () => void signOut() },
+        { text: "Rester", style: "cancel" },
+        { text: "Partir", style: "destructive", onPress: () => void leave() },
       ],
     );
   }
@@ -37,7 +49,7 @@ export default function Salons() {
         </>
       }
     >
-      <Stack.Screen options={{ headerRight: () => <SignOutButton onPress={confirmSignOut} /> }} />
+      <Stack.Screen options={{ headerRight: () => <SignOutButton onPress={confirmLeave} /> }} />
 
       {user ? (
         <View style={s.me}>
@@ -91,7 +103,7 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Se déconnecter"
+      accessibilityLabel="Partir"
       hitSlop={8}
       style={({ pressed }) => [s.headerIcon, pressed && { opacity: 0.6 }]}
     >

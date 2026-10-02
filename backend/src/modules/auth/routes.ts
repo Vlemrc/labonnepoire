@@ -6,6 +6,7 @@ import { requireAuth, currentUser } from "../../middleware/auth.js";
 import { randomAvatar, AVATAR_IDS } from "../users/avatars.js";
 import { avatarSchema, pseudoSchema, updateMeSchema } from "../users/schemas.js";
 import { toPublicUser } from "../users/serializers.js";
+import { leaveGroup } from "../groups/service.js";
 
 export const authRouter = Router();
 
@@ -30,6 +31,29 @@ authRouter.post("/session", async (req, res) => {
     },
   });
   res.status(201).json({ token, user: toPublicUser(user) });
+});
+
+/**
+ * Le joueur part pour de bon. Sans mot de passe, l'app efface son seul acces au
+ * compte : on le fait donc d'abord quitter tous ses salons — sinon il y
+ * resterait en fantome, hote d'un salon que plus personne ne peut lancer, et
+ * siege bloquant dans une partie en cours.
+ *
+ * Le compte n'est pas supprime : ses cartes et ses mises font partie de
+ * l'historique des autres joueurs. On rend seulement son token inutilisable.
+ */
+authRouter.delete("/session", requireAuth, async (req, res) => {
+  const userId = currentUser(req).id;
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  });
+  for (const { groupId } of memberships) await leaveGroup(groupId, userId);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { authTokenHash: hashToken(generateAuthToken()) },
+  });
+  res.status(204).end();
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {

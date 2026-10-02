@@ -589,6 +589,35 @@ describe("suppression du salon", () => {
   });
 });
 
+describe("depart definitif d'un joueur", () => {
+  it("quitte tous ses salons, rend l'hote et libere son siege", async () => {
+    const { players, owner, group, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
+    const other = await as(owner)
+      .post("/groups")
+      .send({ name: "Solo", themes: THEMES })
+      .expect(201);
+
+    await as(owner).delete("/auth/session").expect(204);
+
+    const view = await as(players[1]!).get(`/groups/${group.id}`).expect(200);
+    expect(view.body.group.ownerId).toBe(players[1]!.id);
+    expect(view.body.group.members.map((m: { id: string }) => m.id)).not.toContain(owner.id);
+    const seat = (await as(players[1]!).get(`/sessions/${session.id}`).expect(200)).body.session
+      .players.find((p: { userId: string }) => p.userId === owner.id);
+    expect(seat.isEliminated).toBe(true);
+    // Seul membre de son autre salon : celui-ci disparait avec lui.
+    expect(await prisma.group.count({ where: { id: other.body.group.id } })).toBe(0);
+  });
+
+  it("rend son token inutilisable sans effacer son compte", async () => {
+    const ana = await signUp("Ana");
+    await as(ana).delete("/auth/session").expect(204);
+
+    await as(ana).get("/auth/me").expect(401);
+    expect(await prisma.user.count({ where: { id: ana.id } })).toBe(1);
+  });
+});
+
 describe("gestion du paquet de cartes", () => {
   /** Ne laisse que `keep` cartes jouables, pour rendre les tirages deterministes. */
   async function shrinkDeck(theme: string, keep: number) {

@@ -72,11 +72,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [token],
   );
 
+  // Le serveur passe en premier : il fait quitter tous les salons. Si l'appel
+  // echoue, on garde le token — l'effacer laisserait un fantome dans chaque
+  // salon, que plus personne ne pourrait faire partir.
   const signOut = useCallback(async () => {
+    if (token) await api("/auth/session", { method: "DELETE", token });
     await removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
-  }, []);
+  }, [token]);
 
   const value = useMemo<AuthState>(
     () => ({ ready, token, user, signUp, updateProfile, signOut }),

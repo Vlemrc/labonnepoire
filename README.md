@@ -397,6 +397,7 @@ Authentification : `Authorization: Bearer <token>`, obtenu a la creation du comp
 | Methode | Route | Role |
 |---|---|---|
 | `POST` | `/auth/session` | cree un compte invite, renvoie le token |
+| `DELETE` | `/auth/session` | depart definitif : quitte tous les salons et invalide le token (le compte reste pour l'historique) |
 | `GET` `PATCH` | `/auth/me` | profil (pseudo, avatar, email optionnel) |
 | `GET` | `/auth/avatar-catalog` | bases et accessoires disponibles |
 | `GET` `POST` | `/groups` | lister / creer un salon |
