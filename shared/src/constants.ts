@@ -11,6 +11,10 @@ export const ANSWERS_PER_ROUND = 3;
 
 export const GROUP_CODE_LENGTH = 6;
 
+/** Un pseudo tient sur une ligne partout : listes, classements, en-tetes. */
+export const PSEUDO_MIN_LENGTH = 2;
+export const PSEUDO_MAX_LENGTH = 14;
+
 /**
  * Avatars disponibles. Ce sont des identifiants stables : le backend ne connait
  * que ces chaines et ignore totalement l'apparence. Ajouter un avatar = poser le

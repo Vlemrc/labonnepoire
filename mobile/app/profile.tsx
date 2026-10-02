@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { GroupSummary } from "@poire/shared";
+import { PSEUDO_MAX_LENGTH, PSEUDO_MIN_LENGTH, type GroupSummary } from "@poire/shared";
 import { api } from "../src/api/client";
 import { useAuth } from "../src/auth/AuthContext";
 import { usePendingSalon } from "../src/onboarding/PendingSalon";
@@ -28,7 +28,7 @@ export default function Profile() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = pseudo.trim().length >= 2 && !submitting && pending !== null;
+  const canSubmit = pseudo.trim().length >= PSEUDO_MIN_LENGTH && !submitting && pending !== null;
 
   async function submit() {
     if (!pending) return;
@@ -107,7 +107,7 @@ export default function Profile() {
         value={pseudo}
         onChangeText={setPseudo}
         placeholder="Ton pseudo"
-        maxLength={20}
+        maxLength={PSEUDO_MAX_LENGTH}
         autoCapitalize="words"
         autoCorrect={false}
       />

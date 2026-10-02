@@ -232,6 +232,12 @@ describe("boucle de jeu : une manche, une carte par joueur", () => {
 });
 
 describe("etancheite de l'API", () => {
+  it("refuse un pseudo de plus de 14 caracteres", async () => {
+    await request(app).post("/auth/session").send({ pseudo: "a".repeat(14) }).expect(201);
+    const r = await request(app).post("/auth/session").send({ pseudo: "a".repeat(15) }).expect(400);
+    expect(r.body.error.details[0].message).toBe("Le pseudo fait au plus 14 caractères.");
+  });
+
   it("ne revele jamais la vraie reponse a un parieur avant la resolution", async () => {
     const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
     await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
