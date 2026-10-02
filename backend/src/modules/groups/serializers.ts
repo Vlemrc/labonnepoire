@@ -13,7 +13,6 @@ export function toGroupSummary(group: GroupWithMembers): GroupSummary {
     themes: group.themes,
     allowNoneOption: group.allowNoneOption,
     twistsEnabled: group.twistsEnabled,
-    roundDurationHours: group.roundDurationHours,
     members: group.members.map((m) => toPublicUser(m.user)),
     activeSessionId:
       latest && (latest.status === "LOBBY" || latest.status === "IN_PROGRESS") ? latest.id : null,

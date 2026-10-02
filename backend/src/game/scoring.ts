@@ -28,16 +28,6 @@ export interface ScoringInput {
   players: ScoringPlayer[];
   /** Budget de mise effectif de chaque parieur, pour detecter les mises « tout sur la vraie ». */
   budgets: Record<string, number>;
-  /**
-   * Parieurs qui n'ont rien soumis avant la deadline. Le montant part au
-   * bluffeur. Sans cette penalite, ne jamais miser serait la strategie
-   * optimale : on ne peut que perdre des points en jouant.
-   *
-   * Ce n'est PAS tout leur capital : puisqu'ils misent normalement l'integralite
-   * de ce qu'ils ont, le leur prendre en entier les eliminerait pour une
-   * notification ratee. Voir FORFEIT_RATIO.
-   */
-  forfeits?: { bettorId: string; amount: number }[];
   modifiers: RoundModifiers;
 }
 
@@ -59,14 +49,13 @@ export interface ScoringOutcome {
  * - Mise « aucune » correcte   -> le bluffeur verse la prime au parieur.
  * - Mise « aucune » incorrecte -> le parieur la perd ; le bluffeur en touche 1/N.
  *
- * N est le nombre de parieurs engages sur la carte (mises et forfaits).
+ * N est le nombre de parieurs engages sur la carte.
  *
  * Fonction pure : aucun acces base, aucune date. Tout ce qui la concerne est
  * dans les arguments, ce qui la rend entierement testable.
  */
 export function resolveRound(input: ScoringInput): ScoringOutcome {
   const { bluffeurId, answers, bets, players, budgets, modifiers } = input;
-  const forfeits = input.forfeits ?? [];
 
   const deltas: Record<string, number> = {};
   for (const p of players) deltas[p.userId] = 0;
@@ -92,11 +81,7 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
   const credit = (userId: string, amount: number) => {
     taken[userId] = (taken[userId] ?? 0) + amount;
   };
-  const voters = new Set(
-    [...bets.filter((b) => b.amount > 0), ...forfeits.filter((f) => f.amount > 0)].map(
-      (x) => x.bettorId,
-    ),
-  ).size;
+  const voters = new Set(bets.filter((b) => b.amount > 0).map((b) => b.bettorId)).size;
 
   // --- Phase 1 : les transferts sortants des parieurs. ---------------------
   // La mise est bornee par le capital, mais un multiplicateur de transfert
@@ -131,14 +116,6 @@ export function resolveRound(input: ScoringInput): ScoringOutcome {
     const loss = takeFrom(bet.bettorId, Math.round(bet.amount * mult));
     deltas[bet.bettorId]! -= loss;
     credit(beneficiary, loss);
-  }
-
-  for (const forfeit of forfeits) {
-    ensureKnown(forfeit.bettorId);
-    if (forfeit.amount <= 0) continue;
-    const loss = takeFrom(forfeit.bettorId, Math.round(forfeit.amount * mult));
-    deltas[forfeit.bettorId]! -= loss;
-    credit(bluffeurId, loss);
   }
 
   for (const [userId, amount] of Object.entries(taken)) {
@@ -246,73 +223,4 @@ function assertNoPointCreated(deltas: Record<string, number>): void {
   if (sum > 0) {
     throw new Error(`resolveRound: des points ont ete crees (total = ${sum})`);
   }
-}
-
-function assertZeroSum(deltas: Record<string, number>): void {
-  const sum = Object.values(deltas).reduce((s, d) => s + d, 0);
-  if (sum !== 0) {
-    throw new Error(`resolveRound: invariant somme nulle rompu (total = ${sum})`);
-  }
-}
-
-export interface AbandonInput {
-  bluffeurId: string;
-  /** Parieurs encore actifs du round abandonne. */
-  bettorIds: string[];
-  /** Penalite totale prelevee au bluffeur, a repartir entre les parieurs. */
-  penalty: number;
-  players: ScoringPlayer[];
-}
-
-/**
- * Round abandonne : le bluffeur a laisse expirer la phase d'ecriture.
- *
- * Sa penalite est prelevee sur son capital et repartie entre les parieurs qui
- * ont attendu pour rien. Sans cout, disparaitre en tant que bluffeur serait la
- * facon la moins risquee de jouer — c'est exactement le trou bouche cote
- * parieur par la regle du forfait.
- *
- * La penalite est un TOTAL, pas un montant par parieur : indexee sur le nombre
- * de joueurs, elle eliminerait le bluffeur des le premier oubli dans un salon
- * un peu fourni.
- */
-export function resolveAbandonedRound(input: AbandonInput): ScoringOutcome {
-  const { bluffeurId, bettorIds, penalty, players } = input;
-
-  const deltas: Record<string, number> = {};
-  for (const p of players) deltas[p.userId] = 0;
-  if (!(bluffeurId in deltas)) {
-    throw new Error(`resolveAbandonedRound: bluffeur inconnu (${bluffeurId})`);
-  }
-
-  const pointsBefore = new Map(players.map((p) => [p.userId, p.points]));
-  const available = Math.max(0, pointsBefore.get(bluffeurId) ?? 0);
-  const effective = Math.min(Math.max(0, penalty), available);
-  const payees = bettorIds.filter((id) => id in deltas);
-
-  if (effective > 0 && payees.length > 0) {
-    // Chaque parieur « reclame » la penalite entiere, et payProRata partage le
-    // budget reel entre ces demandes egales : parts egales, reste des arrondis
-    // attribue de facon deterministe, total exactement egal a la penalite.
-    const shares = payProRata(
-      payees.map((id) => ({ to: id, amount: effective })),
-      effective,
-    );
-    for (const [userId, amount] of shares) {
-      if (amount <= 0) continue;
-      deltas[userId]! += amount;
-      deltas[bluffeurId]! -= amount;
-    }
-  }
-
-  const pointsAfter: Record<string, number> = {};
-  const eliminated: string[] = [];
-  for (const p of players) {
-    const after = p.points + deltas[p.userId]!;
-    pointsAfter[p.userId] = after;
-    if (after <= 0) eliminated.push(p.userId);
-  }
-
-  assertZeroSum(deltas);
-  return { deltas, pointsAfter, eliminated };
 }

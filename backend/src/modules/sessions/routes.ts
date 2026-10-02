@@ -3,7 +3,6 @@ import { requireAuth, currentUser } from "../../middleware/auth.js";
 import { assertSessionPlayer, loadSession, quitSession } from "./service.js";
 import { toSessionView } from "./serializers.js";
 import { startManche } from "../rounds/service.js";
-import { sweepExpiredRounds } from "../rounds/sweep.js";
 
 export const sessionsRouter = Router();
 sessionsRouter.use(requireAuth);
@@ -12,9 +11,6 @@ sessionsRouter.use(requireAuth);
 sessionsRouter.get("/:sessionId", async (req, res) => {
   const userId = currentUser(req).id;
   await assertSessionPlayer(req.params.sessionId, userId);
-  // Ouvrir la partie suffit a debloquer un round expire : personne n'a a
-  // reclamer la resolution, et l'ecran affiche deja l'etat a jour.
-  await sweepExpiredRounds({ sessionId: req.params.sessionId });
   res.json({ session: toSessionView(await loadSession(req.params.sessionId), userId) });
 });
 

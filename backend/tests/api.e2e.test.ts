@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../src/lib/prisma.js";
 import { app, as, resetDatabase, signUp, type TestPlayer } from "./helpers/api.js";
 import request from "supertest";
@@ -712,96 +712,53 @@ describe("signalement des cartes", () => {
   });
 });
 
-describe("cartes expirees — le filet de securite de l'asynchrone", () => {
-  const past = () => new Date(Date.now() - 60_000);
-
-  it("annule la carte du joueur qui n'a pas ecrit, et laisse la manche avancer", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
-      startingPoints: 40,
-    });
+describe("cartes sans echeance — seul un depart debloque la manche", () => {
+  it("attend indefiniment le joueur qui n'a pas ecrit", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
     await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
-
-    // Deux joueurs sur trois ecrivent ; le troisieme laisse filer.
     await writeAll([players[0]!, players[1]!], session.id);
-    const silent = (await as(players[2]!).get(`/sessions/${session.id}`)).body.session.currentRound;
-    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { deadlineAt: past() } });
 
     const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    const cancelled = await prisma.round.findUniqueOrThrow({ where: { id: silent.id } });
-    expect(cancelled.status).toBe("CANCELLED");
-
-    // La manche n'est pas bloquee : une carte s'ouvre aux mises.
-    expect(view.body.session.currentRound.status).toBe("BETTING");
-
-    // Le silencieux a paye, les autres ont recu.
-    const points = Object.fromEntries(
-      view.body.session.players.map((p: any) => [p.userId, p.points]),
-    );
-    expect(points[players[2]!.id]).toBeLessThan(40);
-    const total = Object.values(points).reduce((s: number, p: any) => s + p, 0);
-    expect(total).toBe(120); // toujours a somme nulle
+    const statuses = await prisma.round.findMany({ where: { sessionId: session.id } });
+    expect(statuses.some((r) => r.status === "BETTING")).toBe(false);
+    expect(view.body.session.status).toBe("IN_PROGRESS");
   });
 
-  it("expose le motif de l'annulation au joueur", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"]);
+  it("annule la carte du joueur qui part sans ecrire, et laisse la manche avancer", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"]);
     await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
-    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
-    await prisma.round.updateMany({ where: { sessionId: session.id }, data: { deadlineAt: past() } });
+    await writeAll([players[0]!, players[1]!], session.id);
+    const silent = (await as(players[2]!).get(`/sessions/${session.id}`)).body.session.currentRound;
 
-    const view = await as(players[0]!).get(`/rounds/${mine.id}`).expect(200);
-    expect(view.body.round.status).toBe("CANCELLED");
-    expect(view.body.round.cancelReason).toBe("BLUFFEUR_TIMEOUT");
+    await as(players[2]!).post(`/sessions/${session.id}/quit`).expect(200);
+
+    const cancelled = await as(players[0]!).get(`/rounds/${silent.id}`).expect(200);
+    expect(cancelled.body.round.status).toBe("CANCELLED");
+    expect(cancelled.body.round.cancelReason).toBe("PLAYER_LEFT");
+    expect(cancelled.body.round.result).toBeNull();
+
+    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
+    expect(view.body.session.currentRound.status).toBe("BETTING");
   });
 
-  it("fait payer un forfait partiel au parieur qui laisse passer la deadline", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"], { startingPoints: 40 });
+  it("resout la carte quand le dernier parieur attendu s'en va", async () => {
+    const { players, session } = await setupSession(["Ana", "Bruno", "Cleo"], {
+      allowNoneOption: false,
+    });
     await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
     await writeAll(players, session.id);
 
     const round = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
-    const bettor = players.find((p) => p.id !== round.bluffeur.id)!;
-    await prisma.round.update({ where: { id: round.id }, data: { deadlineAt: past() } });
+    const { bettors } = splitRoles(players, round.bluffeur.id);
+    const [stays, leaves] = bettors as [TestPlayer, TestPlayer];
+    await betOnTruth(stays, round.id);
 
-    const view = await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    const points = Object.fromEntries(
-      view.body.session.players.map((p: any) => [p.userId, p.points]),
-    );
-    // Un quart de son capital, pas la totalite : rater une notification ne
-    // doit pas eliminer.
-    expect(points[bettor.id]).toBe(30);
-    expect(points[round.bluffeur.id]).toBe(50);
-  });
+    await as(leaves).post(`/sessions/${session.id}/quit`).expect(200);
 
-  it("ne touche pas a une carte dont la deadline n'est pas passee", async () => {
-    const { players, session } = await setupSession(["Ana", "Bruno"]);
-    await as(players[0]!).post(`/sessions/${session.id}/manches`).expect(201);
-    const mine = (await as(players[0]!).get(`/sessions/${session.id}`)).body.session.currentRound;
-    await as(players[0]!).get(`/sessions/${session.id}`).expect(200);
-    const round = await prisma.round.findUniqueOrThrow({ where: { id: mine.id } });
-    expect(round.status).toBe("WRITING");
-  });
-});
-
-describe("endpoint de maintenance", () => {
-  it("est desactive tant que MAINTENANCE_TOKEN n'est pas configure", async () => {
-    const res = await request(app).post("/maintenance/sweep").expect(503);
-    expect(res.body.error.code).toBe("MAINTENANCE_DISABLED");
-  });
-
-  it("refuse un token invalide quand le balayage est configure", async () => {
-    // La config est validee une seule fois au demarrage : pour tester une autre
-    // valeur il faut vraiment recharger le module, pas juste changer l'env.
-    process.env.MAINTENANCE_TOKEN = "un-secret-de-plus-de-16-caracteres";
-    vi.resetModules();
-    try {
-      const { createApp } = await import("../src/app.js");
-      await request(createApp())
-        .post("/maintenance/sweep")
-        .set("x-maintenance-token", "mauvais")
-        .expect(401);
-    } finally {
-      delete process.env.MAINTENANCE_TOKEN;
-      vi.resetModules();
-    }
+    const done = await as(stays).get(`/rounds/${round.id}`).expect(200);
+    expect(done.body.round.status).toBe("RESOLVED");
+    const view = await as(stays).get(`/sessions/${session.id}`).expect(200);
+    expect(view.body.session.currentRound.id).not.toBe(round.id);
+    expect(view.body.session.currentRound.status).toBe("BETTING");
   });
 });

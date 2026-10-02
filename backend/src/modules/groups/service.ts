@@ -65,9 +65,6 @@ export async function createGroup(
         ...(input.startingPoints !== undefined ? { startingPoints: input.startingPoints as number } : {}),
         ...(input.allowNoneOption !== undefined ? { allowNoneOption: input.allowNoneOption as boolean } : {}),
         ...(input.twistsEnabled !== undefined ? { twistsEnabled: input.twistsEnabled as boolean } : {}),
-        ...(input.roundDurationHours !== undefined
-          ? { roundDurationHours: input.roundDurationHours as number }
-          : {}),
         members: { create: { userId: ownerId } },
       },
       include: groupInclude,

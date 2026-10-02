@@ -1,13 +1,5 @@
 /** Valeurs par defaut d'un salon. Surchargeables a la creation. */
 export const DEFAULT_STARTING_POINTS = 20;
-/**
- * Part du capital qu'un parieur perd s'il laisse expirer la deadline sans
- * miser. Il mise normalement tout son capital : le lui prendre en entier
- * l'eliminerait pour une notification ratee, ce qui est trop cher paye dans un
- * jeu ou l'on repond quand on peut.
- */
-export const FORFEIT_RATIO = 0.25;
-export const DEFAULT_ROUND_DURATION_HOURS = 24;
 
 export const MIN_PLAYERS_PER_SESSION = 2;
 export const MAX_PLAYERS_PER_GROUP = 8;

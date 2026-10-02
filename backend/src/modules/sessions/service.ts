@@ -129,6 +129,28 @@ export async function quitSession(sessionId: string, userId: string) {
       where: { round: { sessionId, status: "BETTING" }, userId, hasSubmitted: false },
       data: { hasSubmitted: true, budget: 0 },
     });
+    await advanceAfterQuit(sessionId, session.currentRoundNumber);
   }
   return loadSession(sessionId);
+}
+
+/**
+ * Fait avancer la manche apres un depart. Sans echeance, rien d'autre ne la
+ * debloquerait : le joueur parti etait peut-etre le dernier parieur attendu sur
+ * la carte en cours, ou sa propre carte, annulee, retenait la suivante.
+ */
+async function advanceAfterQuit(sessionId: string, manche: number) {
+  // Import differe : rounds/service importe deja ce module.
+  const { openNextCardIfReady, resolveRoundAndScore } = await import("../rounds/service.js");
+  const betting = await prisma.round.findFirst({
+    where: { sessionId, manche, status: "BETTING" },
+    include: { participants: true },
+  });
+  const bettors = betting?.participants.filter((p) => p.role === "BETTOR") ?? [];
+  if (betting && bettors.length > 0 && bettors.every((p) => p.hasSubmitted)) {
+    // La resolution ouvre elle-meme la carte suivante.
+    await resolveRoundAndScore(betting.id);
+    return;
+  }
+  await openNextCardIfReady(sessionId, manche);
 }

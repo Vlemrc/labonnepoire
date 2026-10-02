@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from "react-native";
 import type { PublicUser, RoundView } from "@poire/shared";
 import { Appear } from "../components/Appear";
 import { Avatar, Body, Card, Heading, Pill, Screen, Title } from "../components/ui";
-import { Deadline } from "../components/Deadline";
 import { QuestionCard } from "../components/QuestionCard";
 import { colors, fonts, spacing } from "../theme";
 
@@ -41,9 +40,8 @@ export function LiveBetsScreen({ round }: { round: RoundView }) {
   return (
     <Screen>
       <View style={s.header}>
-        <View style={{ gap: spacing.xs, flex: 1 }}>
+        <View style={{ flex: 1 }}>
           <Title>Ta carte est en jeu</Title>
-          <Deadline deadlineAt={round.deadlineAt} />
         </View>
         <View style={s.total}>
           <Text style={s.totalValue}>{myShare}</Text>

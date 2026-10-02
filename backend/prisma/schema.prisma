@@ -85,7 +85,6 @@ model Group {
   themes             String[]
   allowNoneOption    Boolean  @default(true)
   twistsEnabled      Boolean  @default(true)
-  roundDurationHours Int      @default(24)
   createdAt          DateTime @default(now())
 
   members   GroupMember[]
@@ -218,7 +217,6 @@ model Round {
   createdAt      DateTime  @default(now())
   writingEndedAt DateTime?
   resolvedAt     DateTime?
-  deadlineAt     DateTime?
   // Deltas et capitaux d'apres round, figes a la resolution : l'ecran de
   // resultats doit rester consultable meme apres plusieurs rounds.
   result         Json?
@@ -228,7 +226,6 @@ model Round {
   participants RoundParticipant[]
 
   @@unique([sessionId, manche, number])
-  @@index([status, deadlineAt])
 }
 
 model RoundParticipant {

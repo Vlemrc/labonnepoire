@@ -4,7 +4,6 @@ import type { BetInput, RoundView } from "@poire/shared";
 import { useSubmitBets } from "../api/hooks";
 import { Appear } from "../components/Appear";
 import { Body, Button, Card, ErrorText, Heading, Label, Pill, Screen, Title } from "../components/ui";
-import { Deadline } from "../components/Deadline";
 import { QuestionCard } from "../components/QuestionCard";
 import { colors, fonts, radius, spacing, sticker } from "../theme";
 
@@ -67,10 +66,7 @@ export function BetScreen({ round, budget }: { round: RoundView; budget: number 
       }
     >
       <View style={s.header}>
-        <View style={{ gap: spacing.xs }}>
-          <Title>Mise !</Title>
-          <Deadline deadlineAt={round.deadlineAt} />
-        </View>
+        <Title>Mise !</Title>
         <View style={s.budget}>
           <Text style={s.budgetValue}>{remaining}</Text>
           <Label>{remaining > 1 ? "points restants" : "point restant"}</Label>

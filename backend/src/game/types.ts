@@ -37,7 +37,6 @@ export interface RoundSnapshot {
   mode: RoundMode;
   bluffeurId: string;
   allowNoneOption: boolean;
-  deadlineAt: Date | null;
   participants: RoundParticipantSnapshot[];
 }
 

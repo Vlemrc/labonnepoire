@@ -4,7 +4,6 @@ import type { RoundView } from "@poire/shared";
 import { useSubmitAnswers } from "../api/hooks";
 import { Appear } from "../components/Appear";
 import { Body, Button, Card, ErrorText, Field, Heading, Label, Pill, Screen, Title } from "../components/ui";
-import { Deadline } from "../components/Deadline";
 import { colors, fonts, spacing } from "../theme";
 
 /**
@@ -41,13 +40,10 @@ export function BluffScreen({ round }: { round: RoundView }) {
         </>
       }
     >
-      <View style={s.header}>
-        <Title>À toi de mentir</Title>
-        <Deadline deadlineAt={round.deadlineAt} />
-      </View>
+      <Title>À toi de mentir</Title>
       <Body muted>
-        Tout le monde écrit en même temps. Passé le délai, ta carte est annulée
-        et tu perds des points au profit des autres.
+        Tout le monde écrit en même temps. Les cartes s'ouvrent aux mises dès que
+        chacun a envoyé ses mensonges.
       </Body>
 
       <Appear index={0}>
@@ -95,7 +91,6 @@ export function BluffScreen({ round }: { round: RoundView }) {
 }
 
 const s = StyleSheet.create({
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm },
   truth: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,

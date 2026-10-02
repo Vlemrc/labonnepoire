@@ -3,11 +3,9 @@ import { z } from "zod";
 import { requireAuth, currentUser } from "../../middleware/auth.js";
 import { HttpError } from "../../middleware/error.js";
 import { toRoundView } from "./serializers.js";
-import { sweepExpiredRounds } from "./sweep.js";
 import {
   activateTwist,
   loadRound,
-  resolveRoundAndScore,
   submitAnswers,
   submitBets,
 } from "./service.js";
@@ -44,7 +42,6 @@ async function assertParticipant(roundId: string, userId: string) {
 
 roundsRouter.get("/:roundId", async (req, res) => {
   const userId = currentUser(req).id;
-  await sweepExpiredRounds({ roundId: req.params.roundId });
   const round = await assertParticipant(req.params.roundId, userId);
   res.json({ round: toRoundView(round, userId) });
 });
@@ -80,13 +77,5 @@ roundsRouter.post("/:roundId/twist", async (req, res) => {
   const { code } = twistSchema.parse(req.body);
   await assertParticipant(req.params.roundId, userId);
   const round = await activateTwist(req.params.roundId, userId, code);
-  res.json({ round: toRoundView(round, userId) });
-});
-
-/** Force la resolution : utile quand la deadline est passee et qu'un joueur traine. */
-roundsRouter.post("/:roundId/resolve", async (req, res) => {
-  const userId = currentUser(req).id;
-  await assertParticipant(req.params.roundId, userId);
-  const round = await resolveRoundAndScore(req.params.roundId);
   res.json({ round: toRoundView(round, userId) });
 });

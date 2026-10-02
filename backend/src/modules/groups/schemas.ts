@@ -1,16 +1,11 @@
 import { z } from "zod";
-import {
-  DEFAULT_ROUND_DURATION_HOURS,
-  DEFAULT_STARTING_POINTS,
-  GROUP_CODE_LENGTH,
-} from "@poire/shared";
+import { DEFAULT_STARTING_POINTS, GROUP_CODE_LENGTH } from "@poire/shared";
 
 export const groupSettingsSchema = z.object({
   startingPoints: z.number().int().min(5).max(200).default(DEFAULT_STARTING_POINTS),
   themes: z.array(z.string().min(1)).min(1, "Choisis au moins une thématique."),
   allowNoneOption: z.boolean().default(true),
   twistsEnabled: z.boolean().default(true),
-  roundDurationHours: z.number().int().min(1).max(168).default(DEFAULT_ROUND_DURATION_HOURS),
 });
 
 export const createGroupSchema = groupSettingsSchema.partial().extend({

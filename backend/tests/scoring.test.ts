@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAbandonedRound, resolveRound, type ScoringInput } from "../src/game/scoring.js";
+import { resolveRound, type ScoringInput } from "../src/game/scoring.js";
 import { NEUTRAL_MODIFIERS } from "../src/game/types.js";
 import { resolveModifiers } from "../src/game/twists/registry.js";
 
@@ -264,115 +264,6 @@ describe("resolveRound — twists", () => {
     expect(resolveModifiers("N_IMPORTE_QUOI", { bettorCount: 1, bluffeurPoints: 20 })).toEqual(
       NEUTRAL_MODIFIERS,
     );
-  });
-});
-
-describe("resolveRound — forfaits", () => {
-  it("transfere au bluffeur le budget d'un parieur qui n'a pas mise a temps", () => {
-    const out = resolveRound(
-      baseInput({
-        bets: [],
-        forfeits: [{ bettorId: ALICE, amount: 10 }],
-      }),
-    );
-    expect(out.deltas[ALICE]).toBe(-10);
-    expect(out.deltas[BLUFFEUR]).toBe(10);
-  });
-
-  it("compte le forfait parmi les parieurs de la carte", () => {
-    const out = resolveRound(
-      baseInput({
-        players: [
-          { userId: BLUFFEUR, points: 20 },
-          { userId: ALICE, points: 20 },
-          { userId: BOB, points: 6 },
-        ],
-        budgets: { [ALICE]: 10, [BOB]: 6 },
-        bets: [bet(ALICE, "a-true", 10)],
-        forfeits: [{ bettorId: BOB, amount: 6 }],
-      }),
-    );
-    expect(out.deltas[ALICE]).toBe(0);
-    expect(out.deltas[BOB]).toBe(-6);
-    // 6 points perdus, 2 parieurs engages (Alice a mise, Bob a declare forfait).
-    expect(out.deltas[BLUFFEUR]).toBe(3);
-    expect(out.pointsAfter[BOB]).toBe(0);
-    expect(out.eliminated).toEqual([BOB]);
-  });
-});
-
-describe("resolveAbandonedRound — bluffeur qui ne repond pas", () => {
-  const abandon = (over: Partial<Parameters<typeof resolveAbandonedRound>[0]> = {}) =>
-    resolveAbandonedRound({
-      bluffeurId: BLUFFEUR,
-      bettorIds: [ALICE],
-      penalty: 10,
-      players: [
-        { userId: BLUFFEUR, points: 20 },
-        { userId: ALICE, points: 20 },
-      ],
-      ...over,
-    });
-
-  it("preleve la penalite au bluffeur et la verse au parieur", () => {
-    const out = abandon();
-    expect(out.deltas[BLUFFEUR]).toBe(-10);
-    expect(out.deltas[ALICE]).toBe(10);
-  });
-
-  it("repartit la penalite a parts egales entre les parieurs", () => {
-    const out = abandon({
-      bettorIds: [ALICE, BOB],
-      players: [
-        { userId: BLUFFEUR, points: 20 },
-        { userId: ALICE, points: 20 },
-        { userId: BOB, points: 20 },
-      ],
-    });
-    expect(out.deltas[BLUFFEUR]).toBe(-10);
-    expect(out.deltas[ALICE]).toBe(5);
-    expect(out.deltas[BOB]).toBe(5);
-  });
-
-  it("distribue le reste des arrondis sans perdre de point", () => {
-    const out = abandon({
-      penalty: 10,
-      bettorIds: [ALICE, BOB, "u-cleo"],
-      players: [
-        { userId: BLUFFEUR, points: 20 },
-        { userId: ALICE, points: 20 },
-        { userId: BOB, points: 20 },
-        { userId: "u-cleo", points: 20 },
-      ],
-    });
-    expect(out.deltas[BLUFFEUR]).toBe(-10);
-    expect(out.deltas[ALICE]! + out.deltas[BOB]! + out.deltas["u-cleo"]!).toBe(10);
-    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
-  });
-
-  it("plafonne la penalite au capital du bluffeur et l'elimine", () => {
-    const out = abandon({
-      penalty: 10,
-      players: [
-        { userId: BLUFFEUR, points: 4 },
-        { userId: ALICE, points: 20 },
-      ],
-    });
-    expect(out.deltas[BLUFFEUR]).toBe(-4);
-    expect(out.deltas[ALICE]).toBe(4);
-    expect(out.pointsAfter[BLUFFEUR]).toBe(0);
-    expect(out.eliminated).toEqual([BLUFFEUR]);
-  });
-
-  it("ne cree aucun point quand il ne reste aucun parieur", () => {
-    const out = abandon({ bettorIds: [] });
-    expect(out.deltas[BLUFFEUR]).toBe(0);
-    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
-  });
-
-  it("reste a somme nulle", () => {
-    const out = abandon({ penalty: 7, bettorIds: [ALICE] });
-    expect(Object.values(out.deltas).reduce((s, d) => s + d, 0)).toBe(0);
   });
 });
 

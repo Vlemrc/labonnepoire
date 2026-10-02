@@ -40,7 +40,6 @@ librement entre les propositions.
 - jetons poses sur une **fausse** reponse -> perdus ; leur auteur en touche le
   total divise par le nombre de parieurs de la carte (20 perdus a 4 parieurs :
   5 pour le menteur), le reste sort du jeu
-- parieur qui **laisse passer la deadline** -> il perd un quart de son capital
 
 Exemple : tu commences a 20, tu mises 10 sur la bonne reponse et 10 a cote ; a
 la carte suivante tu joues avec 10.
@@ -57,23 +56,24 @@ plafonnee a ce que le joueur possede reellement.
 
 ### Quand un joueur laisse tomber
 
-C'est le mode de panne le plus probable d'un jeu asynchrone, et il est traite
-explicitement : **un seul joueur inactif ne doit jamais pouvoir figer une
-partie.**
+Il n'y a **pas d'echeance** : une carte attend, aussi longtemps qu'il le faut,
+que tout le monde ait joue. La manche n'avance que lorsque chaque joueur a
+ecrit ses mensonges, puis chaque carte ne se resout que lorsque tous ses
+parieurs ont mise. Aucune penalite, aucun forfait.
 
-| situation | consequence |
+Un joueur qui ne revient pas bloque donc la partie. La seule facon de la
+debloquer est qu'il la **quitte** (`POST /sessions/:id/quit`, ou en quittant le
+salon) :
+
+| situation au moment du depart | consequence |
 |---|---|
-| un parieur laisse passer la deadline | il perd un quart de son capital, comme une mise a cote : le bluffeur n'en touche que sa part |
-| le bluffeur n'ecrit pas a temps | le round est annule, il perd un budget de mise (`stakeBudget`) reparti a parts egales entre les parieurs, et on passe au bluffeur suivant |
-| un joueur quitte la partie | il est elimine, ses rounds en cours sont annules |
+| sa carte est en ecriture ou en cours de mises | elle est annulee, sans mouvement de points ; la manche reprend son cours (la carte suivante s'ouvre si tout le monde a ecrit) |
+| sa carte est deja ecrite et attend son tour | elle sera jouee normalement, ses mensonges restent en jeu |
+| il etait le dernier parieur attendu sur la carte en cours | la carte se resout aussitot, puis la suivante s'ouvre |
+| dans tous les cas | il est elimine et ses points sortent du jeu |
 
-La penalite du bluffeur est un **total**, pas un montant par joueur : indexee
-sur le nombre de parieurs, elle l'eliminerait des le premier oubli dans un salon
-un peu fourni. Elle est plafonnee a son capital, donc elle peut l'eliminer mais
-jamais le faire passer sous zero.
-
-Ces transferts passent par les memes fonctions pures que le reste. L'annulation
-d'un round reste a somme nulle : la penalite est integralement redistribuee.
+Un joueur deja a sec n'a rien a miser : il est compte comme ayant joue, la carte
+ne l'attend pas.
 
 ### Deux mecaniques cachees
 
@@ -411,10 +411,8 @@ Authentification : `Authorization: Bearer <token>`, obtenu a la creation du comp
 | `POST` | `/rounds/:id/answers` | bluffeur : deposer les fausses reponses |
 | `POST` | `/rounds/:id/bets` | parieur : repartir son budget |
 | `POST` | `/rounds/:id/twist` | activer sa carte twist |
-| `POST` | `/rounds/:id/resolve` | forcer la resolution apres la deadline |
 | `GET` | `/cards/themes` `/cards/twists` | catalogues |
 | `POST` | `/cards/:cardId/report` | signaler une carte fausse ou ambigue |
-| `POST` | `/maintenance/sweep` | fait avancer tous les rounds expires (tache planifiee) |
 
 `GET /rounds/:id` est le point sensible : la vraie reponse, l'auteur de chaque
 fausse reponse, le mode du round et les mises des autres joueurs ne sont ajoutes
@@ -433,25 +431,6 @@ verrouillent ce comportement.
 3. le `startCommand` applique les migrations (`prisma migrate deploy`) avant de
    demarrer l'API.
 
-### Tache planifiee
-
-`POST /maintenance/sweep` fait avancer tous les rounds expires de la base. Il
-est protege par un secret partage : definir `MAINTENANCE_TOKEN` (32 caracteres
-ou plus) et l'envoyer dans l'en-tete `x-maintenance-token`. **Tant que la
-variable n'est pas definie, l'endpoint repond 503** — mieux vaut une maintenance
-inerte qu'une route ouverte capable de resoudre les rounds de n'importe qui.
-
-Cote Railway, un cron toutes les 10 minutes :
-
-```
-curl -fsS -X POST "$API_URL/maintenance/sweep" -H "x-maintenance-token: $MAINTENANCE_TOKEN"
-```
-
-Ce n'est pas indispensable au fonctionnement : l'API balaie deja les rounds
-expires quand un joueur consulte une partie ou un round. Le cron sert aux cas ou
-personne ne regarde — et il deviendra obligatoire avec les notifications push,
-qui doivent partir sans que quiconque ait ouvert l'app.
-
 Le seed n'est pas execute automatiquement : le lancer une fois a la main
 (`npm run db:seed -w backend` avec le `DATABASE_URL` de production).
 
@@ -469,7 +448,6 @@ Le seed n'est pas execute automatiquement : le lancer une fois a la main
 | 5. Twists supplementaires | a faire |
 | 5b. Relecture des 100 cartes (toutes en `DRAFT`) | **a faire** |
 | 6. Notifications push (le mode asynchrone en a besoin) | **a faire** |
-| 6b. Deblocage automatique des rounds expires | fait |
 | 7. Deploiement Railway | config prete, non deployee |
 | 8. Polish visuel, assets d'avatars definitifs | a faire |
 | 9. Tests de l'app mobile (aucun pour l'instant) | **a faire** |

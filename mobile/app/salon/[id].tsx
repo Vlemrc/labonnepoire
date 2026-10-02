@@ -299,7 +299,7 @@ function RoundCard({ round, cardsTotal }: { round: RoundView; cardsTotal: number
           ? "1 joueur n'a pas encore misé"
           : `${waiting.length} joueurs n'ont pas encore misé`
         : round.status === "CANCELLED"
-          ? `Round annulé : ${round.bluffeur.pseudo} n'a pas répondu à temps`
+          ? `Round annulé : ${round.bluffeur.pseudo} a quitté la partie`
           : "Round terminé";
 
   return (

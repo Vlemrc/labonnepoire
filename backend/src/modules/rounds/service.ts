@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import { FORFEIT_RATIO } from "@poire/shared";
 import { prisma } from "../../lib/prisma.js";
 import { GameRuleError } from "../../game/errors.js";
 import { HttpError } from "../../middleware/error.js";
@@ -50,7 +49,6 @@ function toSnapshot(round: RoundWithRelations): RoundSnapshot {
     mode: round.mode,
     bluffeurId: round.bluffeurId,
     allowNoneOption: round.allowNoneOption,
-    deadlineAt: round.deadlineAt,
     participants: round.participants.map((p) => ({
       userId: p.userId,
       role: p.role,
@@ -119,8 +117,6 @@ async function drawCard(groupId: string, themes: string[], alsoExclude: string[]
  * d'attente par manche au lieu de deux par joueur.
  */
 export async function startManche(sessionId: string, userId: string) {
-  const { sweepExpiredRounds } = await import("./sweep.js");
-  await sweepExpiredRounds({ sessionId });
   const session = await loadSession(sessionId);
 
   if (session.status !== "IN_PROGRESS") {
@@ -162,7 +158,6 @@ export async function startManche(sessionId: string, userId: string) {
     _max: { manche: true },
   }))._max.manche;
   const nextManche = (manche ?? 0) + 1;
-  const deadline = addHours(new Date(), group.roundDurationHours);
 
   // Une carte differente par joueur, tirees d'avance : drawCard exclut les
   // cartes deja vues par le salon, donc l'appeler en boucle evite les doublons
@@ -193,7 +188,6 @@ export async function startManche(sessionId: string, userId: string) {
           mode: r.mode,
           status: "WRITING",
           allowNoneOption: group.allowNoneOption,
-          deadlineAt: deadline,
           participants: {
             create: active.map((p) => ({
               userId: p.userId,
@@ -273,7 +267,6 @@ export async function openNextCardIfReady(sessionId: string, manche: number) {
   if (!next) return;
 
   const round = await loadRound(next.id);
-  const group = round.session.group;
 
   await prisma.$transaction(async (tx) => {
     for (const participant of round.participants) {
@@ -284,16 +277,13 @@ export async function openNextCardIfReady(sessionId: string, manche: number) {
       await tx.roundParticipant.update({
         where: { id: participant.id },
         // Un joueur a sec ne peut plus miser : sans ce passe-droit, la carte
-        // l'attendrait jusqu'a l'echeance et bloquerait toute la manche.
+        // l'attendrait indefiniment et bloquerait toute la manche.
         data: { budget, ...(budget === 0 ? { hasSubmitted: true } : {}) },
       });
     }
     await tx.round.update({
       where: { id: next.id },
-      data: {
-        status: "BETTING",
-        deadlineAt: addHours(new Date(), group.roundDurationHours),
-      },
+      data: { status: "BETTING" },
     });
   });
 }
@@ -327,7 +317,7 @@ export async function submitBets(roundId: string, userId: string, lines: BetLine
   const updated = await loadRound(roundId);
   // Toutes les mises sont secretes jusqu'ici : la resolution ne part que
   // lorsque le dernier parieur a valide, donc personne ne voit les autres.
-  if (canResolve(toSnapshot(updated), new Date())) {
+  if (canResolve(toSnapshot(updated))) {
     return resolveRoundAndScore(roundId);
   }
   return updated;
@@ -382,23 +372,13 @@ export async function resolveRoundAndScore(roundId: string) {
   if (round.status !== "BETTING") {
     throw new GameRuleError("ROUND_NOT_BETTING", "Ce round n'est pas en phase de mises.");
   }
-  if (!canResolve(toSnapshot(round), new Date())) {
+  if (!canResolve(toSnapshot(round))) {
     throw new GameRuleError("ROUND_NOT_READY", "Tous les parieurs n'ont pas encore misé.");
   }
 
   const budgets: Record<string, number> = {};
-  const forfeits: { bettorId: string; amount: number }[] = [];
   for (const p of round.participants) {
-    if (p.role !== "BETTOR") continue;
-    budgets[p.userId] = p.budget;
-    if (!p.hasSubmitted && p.budget > 0) {
-      // Pas tout son capital : il mise normalement l'integralite de ce qu'il a,
-      // le lui prendre en entier l'eliminerait pour une notification ratee.
-      forfeits.push({
-        bettorId: p.userId,
-        amount: Math.max(1, Math.round(p.budget * FORFEIT_RATIO)),
-      });
-    }
+    if (p.role === "BETTOR") budgets[p.userId] = p.budget;
   }
 
   const outcome = computeRound({
@@ -413,7 +393,6 @@ export async function resolveRoundAndScore(roundId: string) {
     })),
     players: round.session.players.map((p) => ({ userId: p.userId, points: p.points })),
     budgets,
-    forfeits,
     modifiers: modifiersFor(round),
   });
 
@@ -485,10 +464,6 @@ export function eliminationUpdate(
     eliminatedManche: round.manche,
     eliminatedCard: round.number,
   };
-}
-
-function addHours(date: Date, hours: number): Date {
-  return new Date(date.getTime() + hours * 3_600_000);
 }
 
 export { sessionInclude };

@@ -9,7 +9,6 @@ import { BetScreen } from "../../src/screens/BetScreen";
 import { ResultScreen } from "../../src/screens/ResultScreen";
 import { LiveBetsScreen } from "../../src/screens/LiveBetsScreen";
 import { Avatar, Body, Button, Card, ErrorText, ErrorView, Heading, Loading, Pill, Screen, Title } from "../../src/components/ui";
-import { Deadline } from "../../src/components/Deadline";
 import { colors, fonts, spacing } from "../../src/theme";
 
 /**
@@ -114,15 +113,11 @@ function isMyTurnToWrite(round: RoundView, userId: string | undefined) {
 }
 
 /**
- * Un round annule n'est pas un ecran vide : la penalite du bluffeur absent a
- * deja change les scores, il faut dire pourquoi et combien.
+ * Un round n'est annule que si son bluffeur a quitte la partie : aucun point
+ * n'a bouge, il suffit de dire pourquoi la carte ne se jouera pas.
  */
 function Cancelled({ round }: { round: RoundView }) {
   const router = useRouter();
-  const { user } = useAuth();
-  const deltas = round.result?.deltas ?? [];
-  const mine = deltas.find((d) => d.user.id === user?.id);
-  const timeout = round.cancelReason === "BLUFFEUR_TIMEOUT";
 
   return (
     <Screen
@@ -134,42 +129,7 @@ function Cancelled({ round }: { round: RoundView }) {
       }
     >
       <Title>Round annulé</Title>
-      <Body muted>
-        {timeout
-          ? `${round.bluffeur.pseudo} n'a pas envoyé ses réponses à temps. Sa mise de départ est répartie entre vous.`
-          : `${round.bluffeur.pseudo} a quitté la partie.`}
-      </Body>
-
-      {mine && mine.delta !== 0 ? (
-        <Card style={{ borderColor: mine.delta > 0 ? colors.success : colors.danger }}>
-          <Text style={[s.bigDelta, { color: mine.delta > 0 ? colors.success : colors.danger }]}>
-            {mine.delta > 0 ? "+" : ""}
-            {mine.delta}
-          </Text>
-          <Body muted>Il te reste {mine.pointsAfter} points.</Body>
-        </Card>
-      ) : null}
-
-      {deltas.length > 0 ? (
-        <Card>
-          <Heading>Bilan</Heading>
-          {deltas.map((d) => (
-            <View key={d.user.id} style={s.row}>
-              <Avatar avatar={d.user.avatar} size={28} />
-              <Text style={s.name}>{d.user.pseudo}</Text>
-              <Text
-                style={[
-                  s.delta,
-                  { color: d.delta > 0 ? colors.success : d.delta < 0 ? colors.danger : colors.textMuted },
-                ]}
-              >
-                {d.delta > 0 ? "+" : ""}
-                {d.delta}
-              </Text>
-            </View>
-          ))}
-        </Card>
-      ) : null}
+      <Body muted>{round.bluffeur.pseudo} a quitté la partie, sa carte ne sera pas jouée.</Body>
     </Screen>
   );
 }
@@ -192,10 +152,7 @@ function Waiting({
 
   return (
     <Screen>
-      <View style={s.titleRow}>
-        <Title>{title}</Title>
-        <Deadline deadlineAt={round.deadlineAt} />
-      </View>
+      <Title>{title}</Title>
       <Body muted>{subtitle}</Body>
 
       {round.twist ? (
@@ -256,10 +213,6 @@ function Waiting({
 }
 
 const s = StyleSheet.create({
-  // Le delai passe sous le titre : a cote, un titre long le poussait hors de l'ecran.
-  titleRow: { alignItems: "flex-start", gap: spacing.xs },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   name: { flex: 1, color: colors.text, fontSize: 16 },
-  bigDelta: { fontFamily: fonts.display, fontSize: 44 },
-  delta: { fontFamily: fonts.display, fontSize: 17, minWidth: 40, textAlign: "right" },
 });

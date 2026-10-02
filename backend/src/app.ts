@@ -9,7 +9,6 @@ import { groupsRouter } from "./modules/groups/routes.js";
 import { sessionsRouter } from "./modules/sessions/routes.js";
 import { roundsRouter } from "./modules/rounds/routes.js";
 import { cardsRouter } from "./modules/cards/routes.js";
-import { maintenanceRouter } from "./modules/maintenance/routes.js";
 
 export function createApp() {
   const app = express();
@@ -18,8 +17,8 @@ export function createApp() {
   app.use(cors({ origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN.split(",") }));
   app.use(express.json({ limit: "128kb" }));
   // Express 5 laisse req.body a undefined quand la requete n'a pas de corps.
-  // Les routes dont le corps est optionnel (activer un twist, resoudre un round)
-  // recevraient alors un 400 de validation au lieu de s'executer.
+  // Les routes dont le corps est optionnel (activer un twist) recevraient
+  // alors un 400 de validation au lieu de s'executer.
   app.use((req, _res, next) => {
     if (req.body === undefined) req.body = {};
     next();
@@ -33,7 +32,6 @@ export function createApp() {
   app.use("/sessions", sessionsRouter);
   app.use("/rounds", roundsRouter);
   app.use("/cards", cardsRouter);
-  app.use("/maintenance", maintenanceRouter);
 
   app.use(notFound);
   app.use(errorHandler);

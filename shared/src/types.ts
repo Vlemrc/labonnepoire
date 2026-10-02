@@ -20,7 +20,6 @@ export interface GroupSettings {
   themes: string[];
   allowNoneOption: boolean;
   twistsEnabled: boolean;
-  roundDurationHours: number;
 }
 
 export interface GroupSummary extends GroupSettings {
@@ -103,7 +102,6 @@ export interface RoundView {
   /** Jetons que CE joueur doit repartir : la totalite de son capital. */
   myBudget: number;
   allowNoneOption: boolean;
-  deadlineAt: string | null;
   bluffeur: PublicUser;
   /** Role du joueur qui fait la requete. */
   myRole: RoundRole;
@@ -131,7 +129,7 @@ export interface RoundView {
   /** Presente quand status vaut RESOLVED ou CANCELLED. */
   result: RoundResultView | null;
   /** Pourquoi le round a ete annule, le cas echeant. */
-  cancelReason: "BLUFFEUR_TIMEOUT" | "PLAYER_LEFT" | null;
+  cancelReason: "PLAYER_LEFT" | null;
 }
 
 export interface RoundResultView {

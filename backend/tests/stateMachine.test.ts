@@ -5,8 +5,6 @@ import {
   evaluateSessionOutcome,
   nextBluffeur,
   normalizeAnswer,
-  hasExpired,
-  isAbandonedInWriting,
   validateBetDistribution,
   validateFakeAnswers,
 } from "../src/game/stateMachine.js";
@@ -19,7 +17,6 @@ const round = (overrides: Partial<RoundSnapshot> = {}): RoundSnapshot => ({
   mode: "STANDARD",
   bluffeurId: "b",
   allowNoneOption: false,
-  deadlineAt: null,
   participants: [
     { userId: "b", role: "BLUFFEUR", hasSubmitted: true, budget: 0 },
     { userId: "a", role: "BETTOR", hasSubmitted: false, budget: 10 },
@@ -135,7 +132,7 @@ describe("validateBetDistribution", () => {
 describe("resolution du round", () => {
   it("attend que tous les parieurs aient mise", () => {
     expect(allBettorsSubmitted(round())).toBe(false);
-    expect(canResolve(round(), new Date())).toBe(false);
+    expect(canResolve(round())).toBe(false);
   });
 
   it("est resoluble des que tous ont mise", () => {
@@ -145,18 +142,11 @@ describe("resolution du round", () => {
         { userId: "a", role: "BETTOR", hasSubmitted: true, budget: 10 },
       ],
     });
-    expect(canResolve(r, new Date())).toBe(true);
-  });
-
-  it("est resoluble apres la deadline meme si un joueur n'a pas mise", () => {
-    const past = new Date("2026-01-01T00:00:00Z");
-    const r = round({ deadlineAt: past });
-    expect(canResolve(r, new Date("2026-01-02T00:00:00Z"))).toBe(true);
-    expect(canResolve(r, new Date("2025-12-31T00:00:00Z"))).toBe(false);
+    expect(canResolve(r)).toBe(true);
   });
 
   it("n'est jamais resoluble en phase d'ecriture", () => {
-    expect(canResolve(round({ status: "WRITING", deadlineAt: new Date(0) }), new Date())).toBe(false);
+    expect(canResolve(round({ status: "WRITING" }))).toBe(false);
   });
 });
 
@@ -204,26 +194,5 @@ describe("fin de partie", () => {
     const out = evaluateSessionOutcome([player("p1", 0, 0), player("p2", 0, 1)]);
     expect(out.isFinished).toBe(true);
     expect(out.winnerId).toBeNull();
-  });
-});
-
-describe("expiration d'un round", () => {
-  const past = new Date("2026-01-01T00:00:00Z");
-  const later = new Date("2026-01-02T00:00:00Z");
-  const earlier = new Date("2025-12-31T00:00:00Z");
-
-  it("detecte un bluffeur qui a laisse filer la phase d'ecriture", () => {
-    const r = round({ status: "WRITING", deadlineAt: past });
-    expect(isAbandonedInWriting(r, later)).toBe(true);
-    expect(isAbandonedInWriting(r, earlier)).toBe(false);
-  });
-
-  it("ne considere pas un round de mises comme abandonne a l'ecriture", () => {
-    expect(isAbandonedInWriting(round({ deadlineAt: past }), later)).toBe(false);
-  });
-
-  it("ne considere jamais un round sans deadline comme expire", () => {
-    expect(hasExpired(round({ deadlineAt: null }), later)).toBe(false);
-    expect(isAbandonedInWriting(round({ status: "WRITING", deadlineAt: null }), later)).toBe(false);
   });
 });
